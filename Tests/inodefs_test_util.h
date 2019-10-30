@@ -51,8 +51,8 @@ void iNodeFS_print (iNodeFS* fs, DirectoryHandle* d);
 // Prints the current directory location
 void iNodeFS_printHandle (void* h);
 
-// Generates a random string
-void gen_random (char *s, const int len);
-
 // Generates names for files
 void gen_filename(char *s, const int len);
+
+// Generates names for directories
+void gen_dirname(char *s, int i);

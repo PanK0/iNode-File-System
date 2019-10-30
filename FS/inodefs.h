@@ -13,25 +13,33 @@
 #define TBA			-1
 #define NAME_SIZE	128
 
+#define SINGLE		-1
+#define DOUBLE		-2
+
 
 /********** INFO STRUCTURS **********/
 
 // Header
 // Occupies the first portion of each block in the disk
 typedef struct {
-	int block_in_file;		// absolute position in the file. If 0 it's an iNode
+	int block_in_file;		// absolute position in the file. If -1 it's an iNode
 	int block_in_node;		// position in the parent's iNode's array
 	int block_in_disk;		// position in the disk
 } BlockHeader;
 
-// File Control Block
+// iNode Control Block
 typedef struct {
 	int directory_block;	// first node of the parent directory
 	int block_in_disk;		// repeated position of the block in the disk
-	int upper;				// index of the upper level node
+	int upper;				// index of the upper level node. TBA if it's a FIL or DIR
+	int node_type;			// NOD for node, FIL for file, DIR for dir
+} iNodeControlBlock;
+
+// File Control Block
+typedef struct {
 	int size_in_bytes;		// size in bytes. Multiple of BLOCK_SIZE
 	int size_in_blocks;		// how many blocks this file occupy on the disk
-	int node_type;			// NOD for node, FIL for file, DIR for dir
+	iNodeControlBlock icb;	// ICB. It's null if we are in a upper level node
 	char name[NAME_SIZE];	// name of the file
 } FileControlBlock;
 
@@ -45,7 +53,7 @@ typedef struct {
 /********** iNODE STRUCT **********/
 
 // Node.
-// Can be a NOD, a FIL, or a DIR
+// Can be a FIL, or a DIR
 // Note that if it's type is NOD, then the node is a sub-level node. It's upper level node is in fcb.upper
 typedef struct {
 	BlockHeader header;
@@ -60,6 +68,18 @@ typedef struct {
 			-sizeof(int)
 			-sizeof(int)) / sizeof(int) ];	
 } iNode;
+
+// Indirect Node.
+// Type NOD 
+typedef struct {
+	BlockHeader header;
+	iNodeControlBlock icb;
+	int num_entries;
+	int file_blocks[ (BLOCK_SIZE
+			-sizeof(BlockHeader)
+			-sizeof(iNodeControlBlock)
+			-sizeof(int)) / sizeof(int) ];
+} iNode_indirect;
 
 
 /********** BLOCK STRUCTS *********/
@@ -93,7 +113,7 @@ typedef struct {
 	iNodeFS* infs;					// pointer to memory file system struct
 	iNode* dcb;						// pointer to the main iNode of the directory
 	iNode* directory;				// pointer to the parent directory (null if top level)
-	iNode* current_node;			// pointer to the current node in the dierctory
+	iNode_indirect* indirect;		// pointer to the current node in the file. Only used if we are in an indexed node
 	BlockHeader* current_block;		// current block in the directory
 	int pos_in_node;				// cursor position in the iNode's index list
 	int pos_in_block;				// relative position of the cursor in the DirectoryBlock
@@ -105,11 +125,28 @@ typedef struct {
 	iNodeFS* infs;					// pointer to memory file system struct
 	iNode* fcb;						// pointer to the main iNode of the file
 	iNode* directory;				// pointer to the directory in where the file is stored
-	iNode* current_node;			// pointer to the current node in the file;
+	iNode_indirect* indirect;		// pointer to the current node in the file. Only used if we are in an indexed node
 	BlockHeader* current_block;		// current block in the file
 	int pos_in_node;				// cursor position in the iNode's index list
 	int pos_in_block;				// relative position of the cursor in the FileBlock
 } FileHandle;
+
+
+/********** SOME SIZES **********/
+
+int inode_idx_size = (BLOCK_SIZE
+			-sizeof(BlockHeader)
+			-sizeof(FileControlBlock)
+			-sizeof(int)
+			-sizeof(int)
+			-sizeof(int)) / sizeof(int);
+int indirect_idx_size = (BLOCK_SIZE
+			-sizeof(BlockHeader)
+			-sizeof(iNodeControlBlock)
+			-sizeof(int)) / sizeof(int);
+int DB_idx_size = (BLOCK_SIZE
+			-sizeof(BlockHeader)) / sizeof(int);
+int FB_text_size = BLOCK_SIZE - sizeof(BlockHeader);
 
 
 /********** FILE SYSTEM'S FUNCTIONS **********/
@@ -124,6 +161,9 @@ DirectoryHandle* iNodeFS_init(iNodeFS* fs, DiskDriver* disk);
 // the current_directory_block is cached in the iNodeFS struct
 // and set to the top level directory
 void iNodeFS_format(iNodeFS* fs);
+
+// Duplicates a directory handle
+DirectoryHandle* AUX_duplicate_dirhandle(DirectoryHandle* d);
 
 // creates an empty file in the directory d
 // returns null on error (file existing, no free blocks)
