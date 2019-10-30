@@ -83,13 +83,12 @@ int main (int argc, char** argv) {
 			else if (strcmp(cmd1, DIR_SHOW) == 0) {
 				iNodeFS_printHandle(dirhandle);
 			}
-/*			
+						
 			// create a dir
 			else if (strcmp(cmd1, DIR_MAKE) == 0) {
 				ret = iNodeFS_mkDir(dirhandle, cmd2);
 			}
-*/
-/*			
+		
 			// create n dirs
 			else if (strcmp(cmd1, DIR_MAKE_N) == 0) {
 				printf (RED "WARNING : mknfil does not control the inserted number of files\n" COLOR_RESET);
@@ -99,15 +98,14 @@ int main (int argc, char** argv) {
 					ret = iNodeFS_mkDir(dirhandle, dirnames[i]);
 				}
 			}
-*/
-/*			
+			
 			// Change directory
 			else if (strcmp(cmd1, DIR_CHANGE) == 0) {
 				ret = iNodeFS_changeDir(dirhandle, cmd2);
 				if (ret == TBA) printf (RED "DIR '%s' DOES NOT EXIST\n" COLOR_RESET, cmd2);
 			}
-*/
-/*			
+
+			
 			// show dir content
 			else if (strcmp(cmd1, DIR_LS) == 0) {
 				char* names[NUM_BLOCKS];
@@ -117,7 +115,7 @@ int main (int argc, char** argv) {
 				iNodeFS_readDir(names, dirhandle);
 				iNodeFS_printArray(names, NUM_BLOCKS);
 			}
-*/
+
 /*			
 			// delete a dir or a file
 			else if (strcmp(cmd1, DIR_REMOVE) == 0) {
@@ -147,12 +145,12 @@ int main (int argc, char** argv) {
 					filehandle = iNodeFS_createFile(dirhandle, filenames[i]);
 				}
 			}
-/*			
+			
 			// open a file
 			else if (strcmp(cmd1, FILE_OPEN) == 0) {
 				filehandle = iNodeFS_openFile(dirhandle, cmd2);
 			}
-*/
+
 /*			
 			// write a file
 			else if (strcmp(cmd1, FILE_WRITE) == 0) {
@@ -179,12 +177,12 @@ int main (int argc, char** argv) {
 				printf ("%s\n", text);
 			}
 */
-/*			
+			
 			// Close a file
 			else if (strcmp(cmd1, FILE_CLOSE) == 0) {
 				filehandle = NULL;
 			}
-*/			
+			
 			// Quit
 			else if (strcmp(cmd1, "quit") == 0) {
 				printf (YELLOW "Shell exited with return status %d\n" COLOR_RESET, ret);

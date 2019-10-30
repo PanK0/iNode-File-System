@@ -171,7 +171,7 @@ DirectoryHandle* AUX_duplicate_dirhandle(DirectoryHandle* d);
 FileHandle* iNodeFS_createFile(DirectoryHandle* d, const char* filename);
 
 // reads in the (preallocated) blocks array, the name of all files in a directory 
-int iNodeFS_readDir(char** names, DirectoryHandle* dirhandle);
+int iNodeFS_readDir(char** names, DirectoryHandle* d);
 
 // opens a file in the  directory d. The file should be exisiting
 FileHandle* iNodeFS_openFile(DirectoryHandle* d, const char* filename);

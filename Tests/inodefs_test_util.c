@@ -35,6 +35,7 @@ void iNodeFS_printHandle (void* h) {
 		printf ("Is Dir?               : %d\n", handle->dcb->fcb.icb.node_type);
 		if (handle->indirect != NULL)
 			printf ("Current indirect      : %d\n", handle->indirect->header.block_in_disk);
+		printf ("Current Block         : %d\n", handle->current_block->block_in_disk);
 		printf ("Block in disk         : %d\n", handle->dcb->header.block_in_disk);
 		printf ("Block in file         : %d\n", handle->current_block->block_in_file);
 		if (handle->directory != NULL) 
@@ -53,6 +54,7 @@ void iNodeFS_printHandle (void* h) {
 		printf ("Is Dir?               : %d\n", handle->fcb->fcb.icb.node_type);
 		if (handle->indirect != NULL)
 			printf ("Current indirect      : %d\n", handle->indirect->header.block_in_disk);
+		printf ("Current Block         : %d\n", handle->current_block->block_in_disk);
 		printf ("Block in disk         : %d\n", handle->current_block->block_in_disk);
 		printf ("Block in file         : %d\n", handle->current_block->block_in_file);
 		printf ("Parent dir's block    : %d\n", handle->fcb->fcb.icb.directory_block); 
@@ -71,4 +73,13 @@ void gen_filename(char *s, int i) {
 // Generates names for directories
 void gen_dirname(char *s, int i) {
 	sprintf (s, "dir_%d", i);
+}
+
+// Prints an array of strings
+void iNodeFS_printArray (char** a, int len) {
+	printf ("[ ");
+	for (int i = 0; i < len; ++i) {
+		if (strcmp(a[i], "") != 0) printf ("%s ", a[i]);
+	}
+	printf ("]\n");
 }

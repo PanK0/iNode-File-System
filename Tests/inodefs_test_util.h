@@ -56,3 +56,6 @@ void gen_filename(char *s, const int len);
 
 // Generates names for directories
 void gen_dirname(char *s, int i);
+
+// Prints an array of strings
+void iNodeFS_printArray (char** a, int len);
