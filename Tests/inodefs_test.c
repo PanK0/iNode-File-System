@@ -150,8 +150,7 @@ int main (int argc, char** argv) {
 			else if (strcmp(cmd1, FILE_OPEN) == 0) {
 				filehandle = iNodeFS_openFile(dirhandle, cmd2);
 			}
-
-/*			
+			
 			// write a file
 			else if (strcmp(cmd1, FILE_WRITE) == 0) {
 				int c = 0;
@@ -161,7 +160,7 @@ int main (int argc, char** argv) {
 				ret = iNodeFS_write(filehandle, bug, sizeof(bug));
 				//printf ("written  %s\n", bug);
 			}
-*/
+
 /*		
 			// seek
 			else if (strcmp(cmd1, FILE_SEEK) == 0) {

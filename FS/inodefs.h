@@ -165,6 +165,9 @@ void iNodeFS_format(iNodeFS* fs);
 // Duplicates a directory handle
 DirectoryHandle* AUX_duplicate_dirhandle(DirectoryHandle* d);
 
+// Duplicates a file handle
+FileHandle* AUX_duplicate_filehandle(FileHandle* f);
+
 // creates an empty file in the directory d
 // returns null on error (file existing, no free blocks)
 // an empty file consists only of a iNode block of type FIL
