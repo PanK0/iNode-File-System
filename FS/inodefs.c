@@ -363,6 +363,313 @@ int iNodeFS_close(FileHandle* f) {
 	return 0;
 }
 
+
+// puts the filehandle at the right place in the inode with side effect
+void AUX_indirect_management (FileHandle* f) {
+	
+	if (f == NULL) return;
+	DiskDriver* disk = f->infs->disk;
+	int snorlax = TBA;
+	iNode_indirect* aux_node = (iNode_indirect*) malloc(sizeof(iNode_indirect));
+	
+	// Case 1 : we're in the main node (type FIL), so f->indirect == NULL;
+	// if there's need to create an indirect node, create it, write it and locate the filehandle
+	if (f->indirect == NULL) {
+		// There's space in FIL
+		if (f->pos_in_node < inode_idx_size) return;
+		// Need to create indirect node
+		if (f->fcb->single_indirect == TBA) {
+			
+			int voyager = DiskDriver_getFreeBlock(disk, 0);
+			if (voyager == TBA) {
+				printf ("ERROR DISK FULL - 1.0 @ AUX_indirect_management()\n");
+			}
+					
+			// Creating BlockHeader
+			BlockHeader header;
+			header.block_in_file = TBA;
+			header.block_in_node = SINGLE;
+			header.block_in_disk = voyager;
+			
+			// Creating icb
+			iNodeControlBlock icb;
+			icb.directory_block = f->directory->header.block_in_disk;
+			icb.block_in_disk = header.block_in_disk;
+			icb.upper = f->fcb->header.block_in_disk;
+			icb.node_type = NOD;
+			
+			// NOD stuffs
+			aux_node->header = header;
+			aux_node->icb = icb;
+			aux_node->num_entries = 0;
+			for (int i = 0; i < indirect_idx_size; ++i) {
+				aux_node->file_blocks[i] = TBA;
+			}
+			
+			// Writing on the disk
+			snorlax = DiskDriver_writeBlock(disk, aux_node, aux_node->header.block_in_disk);
+			if (snorlax == TBA) {
+				printf ("ERROR WRITING - 1.1 @ AUX_indirect_management()\n");
+						
+				// Freeing memory
+				aux_node = NULL;
+				free (aux_node);
+				return;
+			}
+			
+			// Updating f->fcb
+			f->fcb->single_indirect = aux_node->header.block_in_disk;
+			f->fcb->fcb.size_in_blocks += 1;
+			f->fcb->fcb.size_in_bytes += BLOCK_SIZE;
+			snorlax = DiskDriver_writeBlock(disk, f->fcb, f->fcb->header.block_in_disk);
+			if (snorlax == TBA) {
+				printf ("ERROR WRITING - 1.2 @ AUX_indirect_management()\n");
+						
+				// Freeing memory
+				aux_node = NULL;
+				free (aux_node);
+				return;
+			}
+			
+			// Updating f
+			f->indirect = aux_node;
+			f->current_block = &(aux_node->header);
+			f->pos_in_node = 0;
+			f->pos_in_block = 0;
+		}
+		// Don't need to create indirect node: it already exists
+		// just update f
+		else {
+			// Updating f
+			snorlax = DiskDriver_readBlock(disk, aux_node, f->fcb->single_indirect);
+			if (snorlax == TBA) {
+				printf ("ERROR READING - 1.3 @ AUX_indirect_management()\n");
+						
+				// Freeing memory
+				aux_node = NULL;
+				free (aux_node);
+				return;
+			}
+			f->indirect = aux_node;
+			f->current_block = &(aux_node->header);
+			f->pos_in_node = 0;
+			f->pos_in_block = 0;
+		}
+		
+	}
+		// 1. verify if we are in single indirect or in double indirect
+		// 		if in single indirect, f->indirect->icb.upper == f->fcb->header.block_in_disk
+		//		AND f->indirect->header.block_in_disk == f->fcb->single_indirect
+		// 1.1 if single indirect is full, check for double indirect existance. if exists just update f
+		//		if double indirect does not exists, create it and update f
+		// 2. verify if we are in double indirect
+		//		2 cases possible: 
+		//		2.0.1 We are in the double indirect
+		//				f->indirect->icb.upper == f->fcb->header.block_in_disk
+		//				SO verify if it's full
+		//				verify if there's need to create another NOD
+		//		2.0.2 We are in a double indirect NOD
+		//				f->indirect->icb.upper == f->fcb->double_indirect
+		//				SO verify if it's full
+		//				take this node's file_blocks[f->pos_in_node] and verify if it already exists
+		//				create another if necessary
+		// 2.1 
+	else {
+		// We are in the single indirect
+		if (f->indirect->header.block_in_disk == f->fcb->single_indirect && 
+			f->indirect->icb.upper == f->fcb->header.block_in_disk) {
+			
+			if (f->pos_in_node < indirect_idx_size) return;
+			else {
+				// double indirect also exists: just move there f
+				if (f->fcb->double_indirect != TBA) {
+					// Updating f
+					snorlax = DiskDriver_readBlock(disk, aux_node, f->fcb->double_indirect);
+					if (snorlax == TBA) {
+						printf ("ERROR READING - 1.4 @ AUX_indirect_management()\n");
+								
+						// Freeing memory
+						aux_node = NULL;
+						free (aux_node);
+						return;
+					}
+					f->indirect = aux_node;
+					f->current_block = &(aux_node->header);
+					f->pos_in_node = 0;
+					f->pos_in_block = 0;
+				}
+				// double indirect does not exists: create it and move there f
+				else {
+					memset(aux_node, 0, BLOCK_SIZE);
+					int voyager = DiskDriver_getFreeBlock(disk, 0);
+					if (voyager == TBA) {
+						printf ("ERROR DISK FULL - 1.5 @ AUX_indirect_management()\n");
+					}
+					
+					// Creating BlockHeader
+					BlockHeader header;
+					header.block_in_file = TBA;
+					header.block_in_node = DOUBLE;
+					header.block_in_disk = voyager;
+					
+					// Creating icb
+					iNodeControlBlock icb;
+					icb.directory_block = f->directory->header.block_in_disk;
+					icb.block_in_disk = header.block_in_disk;
+					icb.upper = f->fcb->header.block_in_disk;
+					icb.node_type = NOD;
+					
+					// NOD stuffs
+					aux_node->header = header;
+					aux_node->icb = icb;
+					aux_node->num_entries = 0;
+					for (int i = 0; i < indirect_idx_size; ++i) {
+						aux_node->file_blocks[i] = TBA;
+					}
+					
+					// Writing on the disk
+					snorlax = DiskDriver_writeBlock(disk, aux_node, aux_node->header.block_in_disk);
+					if (snorlax == TBA) {
+						printf ("ERROR WRITING - 1.6 @ AUX_indirect_management()\n");
+								
+						// Freeing memory
+						aux_node = NULL;
+						free (aux_node);
+						return;
+					}
+					
+					// Updating f->fcb
+					f->fcb->double_indirect = aux_node->header.block_in_disk;
+					f->fcb->fcb.size_in_blocks += 1;
+					f->fcb->fcb.size_in_bytes += BLOCK_SIZE;
+					snorlax = DiskDriver_writeBlock(disk, f->fcb, f->fcb->header.block_in_disk);
+					if (snorlax == TBA) {
+						printf ("ERROR WRITING - 1.7 @ AUX_indirect_management()\n");
+								
+						// Freeing memory
+						aux_node = NULL;
+						free (aux_node);
+						return;
+					}
+					
+					// Updating f
+					f->indirect = aux_node;
+					f->current_block = &(aux_node->header);
+					f->pos_in_node = 0;
+					f->pos_in_block = 0;
+					
+				}
+			}
+			
+		}
+		// We are in the double indirect
+		else if (f->indirect->header.block_in_disk == f->fcb->double_indirect && 
+				f->indirect->icb.upper == f->fcb->header.block_in_disk) {
+			
+			if (f->pos_in_node < indirect_idx_size) {
+				// Need to create another NOD, then update f
+				if (f->indirect->file_blocks[f->pos_in_block] == TBA) {
+					memset(aux_node, 0, BLOCK_SIZE);
+					int voyager = DiskDriver_getFreeBlock(disk, 0);
+					if (voyager == TBA) {
+						printf ("ERROR DISK FULL - 1.5 @ AUX_indirect_management()\n");
+					}
+					
+					// Creating BlockHeader
+					BlockHeader header;
+					header.block_in_file = TBA;
+					header.block_in_node = f->pos_in_node;
+					header.block_in_disk = voyager;
+					
+					// Creating icb
+					iNodeControlBlock icb;
+					icb.directory_block = f->directory->header.block_in_disk;
+					icb.block_in_disk = header.block_in_disk;
+					icb.upper = f->indirect->header.block_in_disk;
+					icb.node_type = NOD;
+					
+					// NOD stuffs
+					aux_node->header = header;
+					aux_node->icb = icb;
+					aux_node->num_entries = 0;
+					for (int i = 0; i < indirect_idx_size; ++i) {
+						aux_node->file_blocks[i] = TBA;
+					}
+					
+					// Writing on the disk
+					snorlax = DiskDriver_writeBlock(disk, aux_node, aux_node->header.block_in_disk);
+					if (snorlax == TBA) {
+						printf ("ERROR WRITING - 1.6 @ AUX_indirect_management()\n");
+								
+						// Freeing memory
+						aux_node = NULL;
+						free (aux_node);
+						return;
+					}
+					
+					// Updating f->fcb
+					f->fcb->double_indirect = aux_node->header.block_in_disk;
+					f->fcb->fcb.size_in_blocks += 1;
+					f->fcb->fcb.size_in_bytes += BLOCK_SIZE;
+					snorlax = DiskDriver_writeBlock(disk, f->fcb, f->fcb->header.block_in_disk);
+					if (snorlax == TBA) {
+						printf ("ERROR WRITING - 1.7 @ AUX_indirect_management()\n");
+								
+						// Freeing memory
+						aux_node = NULL;
+						free (aux_node);
+						return;
+					}
+					
+					// Updating f
+					f->indirect = aux_node;
+					f->current_block = &(aux_node->header);
+					f->pos_in_node = 0;
+					f->pos_in_block = 0;
+				}
+				// double indirect's NOD also exists. Just update f
+				else {
+					snorlax = DiskDriver_readBlock(disk, aux_node, f->indirect->file_blocks[f->pos_in_block]);
+					if (snorlax == TBA) {
+						printf ("ERROR READING - 1.8 @ AUX_indirect_management()\n");
+								
+						// Freeing memory
+						aux_node = NULL;
+						free (aux_node);
+						return;
+					}
+					
+					// Updating f
+					f->indirect = aux_node;
+					f->current_block = &(aux_node->header);
+					f->pos_in_node = 0;
+					f->pos_in_block = 0;
+					
+				}
+			}
+			// NO MORE SPACE
+			else {
+				printf ("TOO LARGE FILE - 1.8 @ AUX_indirect_management()\n");
+				return;
+			}
+			
+		}
+		/**** TO DO ***/
+		
+		// We are in a double indirect NOD
+		else if (f->indirect->icb.upper == f->fcb->double_indirect && 
+				f->indirect->header.block_in_disk != f->fcb->double_indirect) {
+			// Check if it's full. if so, move to next one
+			
+			// NB if I'm in a double_indirect's NOD, all pointers of filehandle refers to it.
+			// I can go to the next NOD of double_indirect by looking ad NOD->header.block_in_node
+			
+			printf ("DISASTER \n");
+		}
+	}
+	
+}
+
 // writes in the file, at current position for size bytes stored in data
 // overwriting and allocating new space if necessary
 // returns the number of bytes written
@@ -392,12 +699,12 @@ int iNodeFS_write(FileHandle* f, void* data, int size) {
 	int written_data = 0;
 	while (written_data < size) {
 		// Check if we are in the firstfileblock
-		if (f->indirect == NULL) {
+		if (faux->indirect == NULL) {
 			// Write in the block
 			if (faux->fcb->file_blocks[faux->pos_in_node] != TBA) {
 				snorlax = DiskDriver_readBlock(disk, aux_fb, faux->fcb->file_blocks[faux->pos_in_node]);
 				if (snorlax == TBA) {
-					printf ("ERROR WRITING - 1.1 @ iNodeFS_write()\n");
+					printf ("ERROR READING - 1.1 @ iNodeFS_write()\n");
 					
 					// Freeing memory
 					aux_fb = NULL;
@@ -431,12 +738,19 @@ int iNodeFS_write(FileHandle* f, void* data, int size) {
 					++faux->pos_in_node;
 					faux->pos_in_block = 0;
 					
+//NB		     	// Verify if the inode's block list is full.
+					// If so, it will be created an indirect node (if not present) and the filehandle is moved to indirect node
+					AUX_indirect_management(faux);
 				}				
 			}
 			// or create it 
 			else {
 				memset(aux_fb, 0, BLOCK_SIZE);
 				voyager = DiskDriver_getFreeBlock(disk, 0);
+				if (voyager == TBA) {
+					printf ("ERROR DISK FULL - 1.2.1 @ iNodeFS_write()\n");
+					return TBA;
+				}
 				
 				// Header creation
 				BlockHeader header;
@@ -467,6 +781,8 @@ int iNodeFS_write(FileHandle* f, void* data, int size) {
 				// Updating f->fcb
 				faux->fcb->num_entries += 1;
 				faux->fcb->file_blocks[faux->pos_in_node] = aux_fb->header.block_in_disk;
+				faux->fcb->fcb.size_in_blocks += 1;
+				faux->fcb->fcb.size_in_bytes += BLOCK_SIZE;
 				snorlax = DiskDriver_writeBlock(disk, faux->fcb, faux->fcb->header.block_in_disk);
 				if (snorlax == TBA) {
 					printf ("ERROR WRITING - 1.4 @ iNodeFS_write()\n");
@@ -482,10 +798,127 @@ int iNodeFS_write(FileHandle* f, void* data, int size) {
 			}
 			
 		}
-		else {
-			// Check if we are in a single_indirect or in a double_indirect
-			printf ("HELLO\n");
+		// Check if we are in a single_indirect
+		// single_idirect : same thing of first node
+		else if (faux->indirect != NULL && faux->indirect->icb.upper == faux->fcb->header.block_in_disk){
+			
+			// Write int he block...
+			if (faux->indirect->file_blocks[faux->pos_in_node] != TBA) {
+				snorlax = DiskDriver_readBlock(disk, aux_fb, faux->indirect->file_blocks[faux->pos_in_node]);
+				if (snorlax == TBA) {
+					printf ("ERROR READING - 1.5 @ iNodeFS_write()\n");
+					
+					// Freeing memory
+					aux_fb = NULL;
+					free (aux_fb);
+					faux = NULL;
+					free (faux);
+					return TBA;
+				}
+				// Check if the block is full : if not, write, else move f->pos_in_node
+				// if faux->indirect->file_blocks is full we need to create a double indirect
+				if (faux->pos_in_block < FB_text_size) {
+					faux->current_block = &(aux_fb->header);
+					aux_fb->data[faux->pos_in_block] = ((char*)data)[written_data];
+					++faux->pos_in_block;
+					++written_data;
+				}
+				// Update the current block and the pointers
+				else {
+					snorlax = DiskDriver_writeBlock(disk, aux_fb, aux_fb->header.block_in_disk);
+					if (snorlax == TBA) {
+					printf ("ERROR WRITING - 1.6 @ iNodeFS_write()\n");
+					
+					// Freeing memory
+					aux_fb = NULL;
+					free (aux_fb);
+					faux = NULL;
+					free (faux);
+					return TBA;
+					}
+					
+					++faux->pos_in_node;
+					faux->pos_in_block = 0;
+					
+/*NB*/				AUX_indirect_management(faux);
+				}
+			}
+			// ...or create it
+			else {
+				memset(aux_fb, 0, BLOCK_SIZE);
+				voyager = DiskDriver_getFreeBlock(disk, 0);
+				if (voyager == TBA) {
+					printf ("ERROR DISK FULL - 1.7 @ iNodeFS_write()\n");
+					return TBA;
+				}
+				
+				// Header Creation
+				BlockHeader header;
+				header.block_in_file = faux->current_block->block_in_file+1;
+				header.block_in_node = faux->pos_in_node;
+				header.block_in_disk = voyager;
+				
+				// Setting array
+				for (int i = 0; i < FB_text_size; ++i) {
+					aux_fb->data[i] = 0;
+				}
+				
+				aux_fb->header = header;
+				
+				// Writing on disk
+				snorlax = DiskDriver_writeBlock(disk, aux_fb, aux_fb->header.block_in_disk);
+				if (snorlax == TBA) {
+					printf ("ERROR WRITING - 1.8 @ iNodeFS_write()\n");
+					
+					// Freeing memory
+					aux_fb = NULL;
+					free (aux_fb);
+					faux = NULL;
+					free (faux);
+					return TBA;
+				}
+				
+				// Updating faux->fcb
+				faux->fcb->num_entries += 1;
+				faux->indirect->file_blocks[faux->pos_in_node] = aux_fb->header.block_in_disk;
+				faux->fcb->fcb.size_in_blocks += 1;
+				faux->fcb->fcb.size_in_bytes += BLOCK_SIZE;
+				
+				// fcb
+				snorlax = DiskDriver_writeBlock(disk, faux->fcb, faux->fcb->header.block_in_disk);
+				if (snorlax == TBA) {
+					printf ("ERROR WRITING - 1.9 @ iNodeFS_write()\n");
+					
+					// Freeing memory
+					aux_fb = NULL;
+					free (aux_fb);
+					faux = NULL;
+					free (faux);
+					return TBA;
+				}
+				
+				// indirect
+				snorlax = DiskDriver_writeBlock(disk, faux->indirect, faux->indirect->header.block_in_disk);
+				if (snorlax == TBA) {
+					printf ("ERROR WRITING - 1.10 @ iNodeFS_write()\n");
+					
+					// Freeing memory
+					aux_fb = NULL;
+					free (aux_fb);
+					faux = NULL;
+					free (faux);
+					return TBA;
+				}
+				
+			}	
 		}
+		/*** TO DO ***/
+		
+		// Check if we are in a double_indirect
+		// double_indirect : some problems on the way
+//		else if () {
+			
+//		}
 	}
 	
 	// Updating f with faux
