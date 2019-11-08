@@ -16,6 +16,9 @@
 #define SINGLE		-1
 #define DOUBLE		-2
 
+#define READ		0
+#define WRITE		1
+
 
 /********** INFO STRUCTURS **********/
 
@@ -182,6 +185,10 @@ FileHandle* iNodeFS_openFile(DirectoryHandle* d, const char* filename);
 // closes a file handle (destroyes it)
 // RETURNS 0 on success, -1 if fails
 int iNodeFS_close(FileHandle* f);
+
+// puts the filehandle at the right place in the inode with side effect
+// mode == READ or WRITE
+void AUX_indirect_management (FileHandle* f, int mode);
 
 // writes in the file, at current position for size bytes stored in data
 // overwriting and allocating new space if necessary

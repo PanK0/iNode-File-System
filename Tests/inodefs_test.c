@@ -64,14 +64,15 @@ int main (int argc, char** argv) {
 				DIR_MAKE" [dir]  : creates a directory named 'dir'\n"
 				DIR_LS"           : prints the dir's content\n"
 				YELLOW "\n FILE\n" COLOR_RESET
-				FILE_SHOW"    : show the last opened file\n"
+				FILE_SHOW"           : show the last opened file\n"
 				FILE_MAKE" [fil]   : create a file named 'fil' \n"
 				FILE_MAKE_N" [n]    : create n files\n"
-				FILE_OPEN" [fil]   : open file named 'fil' \n"
-				FILE_WRITE" [txt]  : writes 'txt' in the last opened file\n"
-				FILE_SEEK" [n]    : moves the cursor at pos n in the opened file\n"
+				FILE_OPEN" [fil]    : open file named 'fil' \n"
+				FILE_WRITE" [txt]   : writes 'txt' in the last opened file\n"
+				FILE_READ"           : open the current file \n"
+				FILE_SEEK" [n]      : moves the cursor at pos n in the opened file\n"
 				
-				FILE_CLOSE"       : closes the last opened file\n"
+				FILE_CLOSE"        : closes the last opened file\n"
 				
 				);
 			}
@@ -156,26 +157,24 @@ int main (int argc, char** argv) {
 				int c = 0;
 				while (cmd2[c] != '\0') ++c;
 				char bug[c];
+				for (int i = 0; i < c; ++i) bug[i] = 0;
 				strncpy(bug, cmd2, c);
 				ret = iNodeFS_write(filehandle, bug, sizeof(bug));
-				//printf ("written  %s\n", bug);
+				printf ("written bytes :  %d\n", ret);
 			}
-
-/*		
+		
 			// seek
 			else if (strcmp(cmd1, FILE_SEEK) == 0) {
 				ret = iNodeFS_seek(filehandle, atoi(cmd2));
 			}
-*/
-/*			
+			
 			// read a file
 			else if (strcmp(cmd1, FILE_READ) == 0 && filehandle != NULL) {
-				int cmd_len = (BLOCK_SIZE-sizeof(FileControlBlock) - sizeof(BlockHeader) ) + ((BLOCK_SIZE-sizeof(BlockHeader))/sizeof(int) * (filehandle->fcb->fcb.size_in_blocks-1));
+				int cmd_len = 128;
 				char text[cmd_len];
 				ret = iNodeFS_read(filehandle, text, cmd_len);
 				printf ("%s\n", text);
 			}
-*/
 			
 			// Close a file
 			else if (strcmp(cmd1, FILE_CLOSE) == 0) {

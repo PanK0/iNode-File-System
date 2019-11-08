@@ -365,7 +365,8 @@ int iNodeFS_close(FileHandle* f) {
 
 
 // puts the filehandle at the right place in the inode with side effect
-void AUX_indirect_management (FileHandle* f) {
+// mode == READ or WRITE
+void AUX_indirect_management (FileHandle* f, int mode) {
 	
 	if (f == NULL) return;
 	DiskDriver* disk = f->infs->disk;
@@ -378,7 +379,7 @@ void AUX_indirect_management (FileHandle* f) {
 		// There's space in FIL
 		if (f->pos_in_node < inode_idx_size) return;
 		// Need to create indirect node
-		if (f->fcb->single_indirect == TBA) {
+		if (f->fcb->single_indirect == TBA && mode == WRITE) {
 			
 			int voyager = DiskDriver_getFreeBlock(disk, 0);
 			if (voyager == TBA) {
@@ -499,7 +500,7 @@ void AUX_indirect_management (FileHandle* f) {
 					f->pos_in_block = 0;
 				}
 				// double indirect does not exists: create it and move there f
-				else {
+				else if (f->fcb->double_indirect == TBA && mode == WRITE) {
 					memset(aux_node, 0, BLOCK_SIZE);
 					int voyager = DiskDriver_getFreeBlock(disk, 0);
 					if (voyager == TBA) {
@@ -568,7 +569,7 @@ void AUX_indirect_management (FileHandle* f) {
 			
 			if (f->pos_in_node < indirect_idx_size) {
 				// Need to create another NOD, then update f
-				if (f->indirect->file_blocks[f->pos_in_block] == TBA) {
+				if (f->indirect->file_blocks[f->pos_in_block] == TBA && mode == WRITE) {
 					memset(aux_node, 0, BLOCK_SIZE);
 					int voyager = DiskDriver_getFreeBlock(disk, 0);
 					if (voyager == TBA) {
@@ -687,7 +688,7 @@ int iNodeFS_write(FileHandle* f, void* data, int size) {
 	if (f == NULL) return TBA;
 	if (f->infs == NULL) return TBA;
 	DiskDriver* disk = f->infs->disk;
-	if (f == NULL) return TBA;
+	if (disk == NULL) return TBA;
 	if (data == NULL) return TBA;
 	
 	// Blocks stuffs
@@ -695,9 +696,9 @@ int iNodeFS_write(FileHandle* f, void* data, int size) {
 	FileHandle* faux = AUX_duplicate_filehandle(f);
 	int snorlax = TBA;
 	int voyager = TBA;
-	
+
 	int written_data = 0;
-	while (written_data < size) {
+	while (written_data < size ) {
 		// Check if we are in the firstfileblock
 		if (faux->indirect == NULL) {
 			// Write in the block
@@ -713,13 +714,31 @@ int iNodeFS_write(FileHandle* f, void* data, int size) {
 					free (faux);
 					return TBA;
 				}
+				
 				// Check if the block is full : if not, write, else move f->pos_in_node.
 				// if f->fcb->file_blocks if full we need to create an indexed node
 				if (faux->pos_in_block < FB_text_size) {
 					faux->current_block = &(aux_fb->header);
 					aux_fb->data[faux->pos_in_block] = ((char*)data)[written_data];
+					//strncpy(aux_fb->data, (char*)data, size);
+					
+					printf ("text: %s, wdata: %d, posinblock: %d, data : %s\n", aux_fb->data, written_data, faux->pos_in_block, (char*)data);
+					
 					++faux->pos_in_block;
 					++written_data;
+					
+					// write
+					snorlax = DiskDriver_writeBlock(disk, aux_fb, aux_fb->header.block_in_disk);
+					if (snorlax == TBA) {
+						printf ("ERROR WRITING - 1.1.2 @ iNodeFS_write()\n");
+						
+						// Freeing memory
+						aux_fb = NULL;
+						free (aux_fb);
+						faux = NULL;
+						free (faux);
+						return TBA;
+					}									
 				}
 				// update the current block and the pointers
 				else {
@@ -740,7 +759,7 @@ int iNodeFS_write(FileHandle* f, void* data, int size) {
 					
 //NB		     	// Verify if the inode's block list is full.
 					// If so, it will be created an indirect node (if not present) and the filehandle is moved to indirect node
-					AUX_indirect_management(faux);
+					AUX_indirect_management(faux, WRITE);
 				}				
 			}
 			// or create it 
@@ -822,6 +841,20 @@ int iNodeFS_write(FileHandle* f, void* data, int size) {
 					aux_fb->data[faux->pos_in_block] = ((char*)data)[written_data];
 					++faux->pos_in_block;
 					++written_data;
+					
+					// write
+					snorlax = DiskDriver_writeBlock(disk, aux_fb, aux_fb->header.block_in_disk);
+					if (snorlax == TBA) {
+					printf ("ERROR WRITING - 1.1.2 @ iNodeFS_write()\n");
+					
+					// Freeing memory
+					aux_fb = NULL;
+					free (aux_fb);
+					faux = NULL;
+					free (faux);
+					return TBA;
+					}
+					
 				}
 				// Update the current block and the pointers
 				else {
@@ -840,7 +873,7 @@ int iNodeFS_write(FileHandle* f, void* data, int size) {
 					++faux->pos_in_node;
 					faux->pos_in_block = 0;
 					
-/*NB*/				AUX_indirect_management(faux);
+/*NB*/				AUX_indirect_management(faux, WRITE);
 				}
 			}
 			// ...or create it
@@ -932,19 +965,134 @@ int iNodeFS_write(FileHandle* f, void* data, int size) {
 	free (aux_fb);
 	faux = NULL;
 	free (faux);
-	return TBA;
 	
 	return written_data;
 }
 
 // reads in the file, at current position size bytes and stores them in data
 // returns the number of bytes read
-int iNodeFS_read(FileHandle* f, void* data, int size);
+int iNodeFS_read(FileHandle* f, void* data, int size) {
+	
+	// Preliminary stuffs
+	if (f == NULL) return TBA;
+	if (f->infs == NULL) return TBA;
+	DiskDriver* disk = f->infs->disk;
+	if (disk == NULL) return TBA;
+	if (data == NULL) return TBA;
+	
+	// Blocks stuffs
+	FileBlock* aux_fb = (FileBlock*) malloc(sizeof(FileBlock));
+	FileHandle* faux = AUX_duplicate_filehandle(f);
+	int snorlax = TBA;
+	
+	int read_data = 0;
+	while (read_data < size) {
+		// Check if we are in the firstfileblock		
+		if (faux->indirect == NULL) {
+			// Read the block
+			if (faux->fcb->file_blocks[faux->pos_in_node] != TBA) {
+				snorlax = DiskDriver_readBlock(disk, aux_fb, faux->fcb->file_blocks[faux->pos_in_node]);
+				if (snorlax == TBA) {
+					printf ("ERROR READING - 2.1 @ iNodeFS_read()\n");
+					
+					// Freeing memory
+					aux_fb = NULL;
+					free (aux_fb);
+					faux = NULL;
+					free (faux);
+					return TBA;
+				}
+				
+				// Check if the block is full : if not, read, else move f->pos_in_node.
+				if (faux->pos_in_block < FB_text_size) {
+					faux->current_block = &(aux_fb->header);
+					if (aux_fb->data[faux->pos_in_block] == '\0') break;
+					((char*)data)[read_data] = aux_fb->data[faux->pos_in_block];
+				
+					++faux->pos_in_block;
+					++read_data;
+				}
+				// update the pointers
+				else {
+					++faux->pos_in_node;
+					faux->pos_in_block = 0;
+					
+					AUX_indirect_management(faux, READ);
+				}
+			}
+		}
+		// Check if we are in a single_indirect
+		//single_idirect : same thing of first node
+		else if (faux->indirect != NULL && faux->indirect->icb.upper == faux->fcb->header.block_in_disk){
+			snorlax = DiskDriver_readBlock(disk, aux_fb, faux->indirect->file_blocks[faux->pos_in_node]);
+			if (snorlax == TBA) {
+				printf ("ERROR READING - 2.2 @ iNodeFS_read()\n");
+				
+				// Freeing memory
+				aux_fb = NULL;
+				free (aux_fb);
+				faux = NULL;
+				free (faux);
+				return TBA;
+			}
+			// Check if the block is full : if not, read, else move f->pos_in_node
+			if (faux->pos_in_block < FB_text_size) {
+				faux->current_block = &(aux_fb->header);
+				((char*)data)[read_data] = aux_fb->data[faux->pos_in_block];
+				++faux->pos_in_block;
+				++read_data;
+			}
+			// Update the pointers
+			else {
+				++faux->pos_in_node;
+				faux->pos_in_block = 0;
+				
+				AUX_indirect_management(faux, READ);
+			}
+		}
+		/*** TO DO ***/
+		// Check if we are in a double_indirect
+		// double_indirect : some problems on the way
+	}
+	
+	// Updating f with faux
+	f->indirect = faux->indirect;
+	f->current_block = faux->current_block;
+	f->pos_in_node = faux->pos_in_node;
+	f->pos_in_block = faux->pos_in_block;
+	
+	// Freeing memory
+	aux_fb = NULL;
+	free (aux_fb);
+	faux = NULL;
+	free (faux);
+	
+	return read_data;
+}
 
 // returns the number of bytes read (moving the current pointer to pos)
 // returns pos on success
 // -1 on error (file too short)
-int iNodeFS_seek(FileHandle* f, int pos);
+int iNodeFS_seek(FileHandle* f, int pos) {
+	
+	// Preliminary stuffs
+	if (f == NULL) return TBA;
+	if (f->infs == NULL) return TBA;
+	DiskDriver* disk = f->infs->disk;
+	if (disk == NULL) return TBA;
+	if (pos < 0) {
+		printf ("ERROR NEGATIVE SEEK INPUT - 3.1 @ iNodeFS_seek()\n");
+		return TBA;
+	}
+	
+	f->pos_in_node = 0;
+	f->pos_in_block = 0;
+	f->indirect = NULL;
+	f->current_block = &(f->fcb->header);
+	
+	return TBA;
+	
+}
 
 // seeks for a directory in d. If dirname is equal to ".." it goes one level up
 // 0 on success, negative value on error
