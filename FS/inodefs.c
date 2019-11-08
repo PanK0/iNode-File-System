@@ -722,7 +722,7 @@ int iNodeFS_write(FileHandle* f, void* data, int size) {
 					aux_fb->data[faux->pos_in_block] = ((char*)data)[written_data];
 					//strncpy(aux_fb->data, (char*)data, size);
 					
-					printf ("text: %s, wdata: %d, posinblock: %d, data : %s\n", aux_fb->data, written_data, faux->pos_in_block, (char*)data);
+					//printf ("text: %s, wdata: %d, posinblock: %d, data : %s\n", aux_fb->data, written_data, faux->pos_in_block, (char*)data);
 					
 					++faux->pos_in_block;
 					++written_data;
@@ -1085,10 +1085,98 @@ int iNodeFS_seek(FileHandle* f, int pos) {
 		return TBA;
 	}
 	
+	int snorlax = TBA;
+	int pos_in_node = TBA;
+	int pos_in_block = TBA;
+	int inode_size = inode_idx_size * FB_text_size;
+	int indirect_size = indirect_idx_size * FB_text_size;
+	int double_indirect_size = indirect_idx_size * indirect_idx_size * FB_text_size;
+	
+/*	
 	f->pos_in_node = 0;
 	f->pos_in_block = 0;
 	f->indirect = NULL;
 	f->current_block = &(f->fcb->header);
+*/
+		
+	// Calculating the position
+	if (pos < inode_size) {
+		pos_in_node = pos / FB_text_size;
+		pos_in_block = pos % FB_text_size;
+		
+		if (f->fcb->file_blocks[pos_in_node] != TBA) {
+			FileBlock* aux_fb = (FileBlock*) malloc(sizeof(FileBlock));
+			snorlax = DiskDriver_readBlock(disk, aux_fb, f->fcb->file_blocks[pos_in_node]);
+			if (snorlax == TBA) {
+				printf ("ERROR READING - 3.2 @ iNodeFS_seek()\n");
+				
+				// Free memory
+				aux_fb = NULL;
+				free (aux_fb);
+				
+				return TBA;
+			}
+			
+			// Updating f
+			f->current_block = &(aux_fb->header);
+			f->pos_in_node = pos_in_node;
+			f->pos_in_block = pos_in_block;
+			f->indirect = NULL;
+			
+			return (pos_in_node + pos_in_block);
+		}
+		else {
+			printf ("ERROR BAD SEEK INPUT - 3.3 @ iNodeFS_seek()\n");
+			return TBA;
+		}
+	}
+	// we are in the single_indirect
+	else if (pos >= inode_size && pos < (inode_size + indirect_size) ) {
+		pos_in_node = (pos - inode_size) / FB_text_size;
+		pos_in_block = (pos - inode_size) % FB_text_size;
+		
+		if (f->fcb->single_indirect != TBA) {
+			iNode_indirect* aux_indirect = (iNode_indirect*) malloc(sizeof(iNode_indirect));
+			snorlax = DiskDriver_readBlock(disk, aux_indirect, f->fcb->single_indirect);
+			if (snorlax == TBA) {
+				printf ("ERROR READING - 3.3 @ iNodeFS_seek()\n");
+				
+				// Free memory
+				aux_indirect = NULL;
+				free (aux_indirect);
+				
+				return TBA;
+			}
+			
+			if (aux_indirect->file_blocks[pos_in_node] != TBA) {
+				FileBlock* aux_fb = (FileBlock*) malloc(sizeof(FileBlock));
+				snorlax = DiskDriver_readBlock(disk, aux_fb, f->fcb->file_blocks[pos_in_node]);
+				if (snorlax == TBA) {
+					printf ("ERROR READING - 3.4 @ iNodeFS_seek()\n");
+					
+					// Free memory
+					aux_indirect = NULL;
+					free (aux_fb);
+					aux_fb = NULL;
+					free (aux_fb);
+					
+					return TBA;
+				}
+				
+				// Updating f
+				f->current_block = &(aux_fb->header);
+				f->indirect = aux_indirect;
+				f->pos_in_node = pos_in_node;
+				f->pos_in_block = pos_in_block;
+				
+				return (pos_in_node + pos_in_block);
+			}
+		}
+	}
+	// we are in a double_indirect
+	else if (pos >= (inode_size + indirect_size) ) {
+		printf ("HELLO\n");
+	}
 	
 	return TBA;
 	

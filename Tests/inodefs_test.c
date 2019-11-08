@@ -170,10 +170,11 @@ int main (int argc, char** argv) {
 			
 			// read a file
 			else if (strcmp(cmd1, FILE_READ) == 0 && filehandle != NULL) {
-				int cmd_len = 128;
+				int cmd_len = filehandle->fcb->fcb.size_in_bytes;
 				char text[cmd_len];
 				ret = iNodeFS_read(filehandle, text, cmd_len);
 				printf ("%s\n", text);
+				printf ("read bytes : %d\n", ret);
 			}
 			
 			// Close a file
