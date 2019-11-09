@@ -364,7 +364,7 @@ int iNodeFS_close(FileHandle* f) {
 }
 
 
-// puts the filehandle at the right place in the inode with side effect
+// puts the filehandle at the right place in the inode with side effect on the filehandle
 // mode == READ or WRITE
 void AUX_indirect_management (FileHandle* f, int mode) {
 	
@@ -1329,7 +1329,7 @@ int iNodeFS_mkDir(DirectoryHandle* d, char* dirname) {
 			snorlax = DiskDriver_readBlock(disk, aux_node, d->dcb->file_blocks[i]);
 			if (snorlax != TBA) {
 				if (aux_node->fcb.icb.node_type == DIR && strcmp(aux_node->fcb.name, dirname) == 0) {
-					printf ("DIR %s ALREADY EXISTS. CREATION FAILED @ iNodeFS_createFile()\n", dirname);
+					printf ("DIR %s ALREADY EXISTS. CREATION FAILED @ iNodeFS_mkdir()\n", dirname);
 								
 					// Freeing memory
 					aux_node = NULL;
@@ -1346,7 +1346,7 @@ int iNodeFS_mkDir(DirectoryHandle* d, char* dirname) {
 	// At this point is sure that does not exists a file with the same filename.
 	// Check if there's need to extend the node
 	if (daux->pos_in_node == TBA) {
-		printf ("NEED TO EXTEND THE NODE! @ iNodeFS_createFile()\n");
+		printf ("NEED TO EXTEND THE NODE! @ iNodeFS_mkdir()\n");
 		
 		// Freeing memory
 		aux_node = NULL;
@@ -1361,7 +1361,7 @@ int iNodeFS_mkDir(DirectoryHandle* d, char* dirname) {
 	memset(aux_node, 0, BLOCK_SIZE);
 	int voyager = DiskDriver_getFreeBlock(disk, 0);
 	if (voyager == TBA) {
-		printf ("ERROR - DISK COULD BE FULL @ iNodeFS_createFile()\n");
+		printf ("ERROR - DISK COULD BE FULL @ iNodeFS_mkdir()\n");
 		
 		// Freeing memory		
 		daux = NULL;
@@ -1403,7 +1403,7 @@ int iNodeFS_mkDir(DirectoryHandle* d, char* dirname) {
 	// Writing on the disk
 	snorlax = DiskDriver_writeBlock(disk, aux_node, aux_node->header.block_in_disk);
 	if (snorlax == TBA) {
-		printf ("ERROR WRITING AUX NODE ON THE DISK @ iNodeFS_createFile()\n");
+		printf ("ERROR WRITING AUX NODE ON THE DISK @ iNodeFS_mkdir()\n");
 		
 		// Freeing memory
 		aux_node = NULL;
@@ -1419,7 +1419,7 @@ int iNodeFS_mkDir(DirectoryHandle* d, char* dirname) {
 	d->dcb->num_entries += 1;
 	snorlax = DiskDriver_writeBlock(disk, d->dcb, d->dcb->header.block_in_disk);
 	if (snorlax == TBA) {
-		printf ("ERROR UPDATING DCB ON THE DISK @ iNodeFS_createFile()\n");
+		printf ("ERROR UPDATING DCB ON THE DISK @ iNodeFS_mkdir()\n");
 		return TBA;
 	}
 	d->pos_in_node = daux->pos_in_node;

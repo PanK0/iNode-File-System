@@ -64,14 +64,15 @@ int main (int argc, char** argv) {
 				DIR_MAKE" [dir]  : creates a directory named 'dir'\n"
 				DIR_LS"           : prints the dir's content\n"
 				YELLOW "\n FILE\n" COLOR_RESET
-				FILE_SHOW"           : show the last opened file\n"
+				FILE_SHOW"          : show the last opened file\n"
 				FILE_MAKE" [fil]   : create a file named 'fil' \n"
 				FILE_MAKE_N" [n]    : create n files\n"
 				FILE_OPEN" [fil]    : open file named 'fil' \n"
 				FILE_WRITE" [txt]   : writes 'txt' in the last opened file\n"
 				FILE_READ"           : open the current file \n"
 				FILE_SEEK" [n]      : moves the cursor at pos n in the opened file\n"
-				
+				FILE_DANTE"         : writes Divina Commedia into the file\n"
+				FILE_OMERO"         : writes Iliad into the file\n"
 				FILE_CLOSE"        : closes the last opened file\n"
 				
 				);
@@ -162,6 +163,18 @@ int main (int argc, char** argv) {
 				ret = iNodeFS_write(filehandle, bug, sizeof(bug));
 				printf ("written bytes :  %d\n", ret);
 			}
+			
+			// write Dante
+			else if (strcmp(cmd1, FILE_DANTE) == 0) {
+				ret = iNodeFS_write(filehandle, dante, sizeof(dante));
+				printf ("written bytes : %d - from DANTE\n", ret);
+			}
+			
+			// write Omero
+			else if (strcmp(cmd1, FILE_OMERO) == 0) {
+				ret = iNodeFS_write(filehandle, omero, sizeof(omero));
+				printf ("written bytes : %d - from OMERO\n", ret);
+			}
 		
 			// seek
 			else if (strcmp(cmd1, FILE_SEEK) == 0) {
@@ -173,6 +186,7 @@ int main (int argc, char** argv) {
 			else if (strcmp(cmd1, FILE_READ) == 0 && filehandle != NULL) {
 				int cmd_len = filehandle->fcb->fcb.size_in_bytes;
 				char text[cmd_len];
+				for (int i = 0; i < cmd_len; ++i) text[i] = 0;
 				ret = iNodeFS_read(filehandle, text, cmd_len);
 				printf ("%s\n", text);
 				printf ("read bytes : %d\n", ret);
