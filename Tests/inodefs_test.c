@@ -166,6 +166,7 @@ int main (int argc, char** argv) {
 			// seek
 			else if (strcmp(cmd1, FILE_SEEK) == 0) {
 				ret = iNodeFS_seek(filehandle, atoi(cmd2));
+				printf ("Pointer moved in pos : %d\n", ret);
 			}
 			
 			// read a file

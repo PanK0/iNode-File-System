@@ -1139,7 +1139,7 @@ int iNodeFS_seek(FileHandle* f, int pos) {
 			iNode_indirect* aux_indirect = (iNode_indirect*) malloc(sizeof(iNode_indirect));
 			snorlax = DiskDriver_readBlock(disk, aux_indirect, f->fcb->single_indirect);
 			if (snorlax == TBA) {
-				printf ("ERROR READING - 3.3 @ iNodeFS_seek()\n");
+				printf ("ERROR READING - 3.3.2 @ iNodeFS_seek()\n");
 				
 				// Free memory
 				aux_indirect = NULL;
@@ -1174,8 +1174,62 @@ int iNodeFS_seek(FileHandle* f, int pos) {
 		}
 	}
 	// we are in a double_indirect
-	else if (pos >= (inode_size + indirect_size) ) {
-		printf ("HELLO\n");
+	else if (pos >= (inode_size + indirect_size) && pos < double_indirect_size -1) {
+		int pos_in_indirect = (pos - inode_size - indirect_size) / indirect_size;  //Nod in indirect
+		pos_in_node = ((pos - inode_size - indirect_size) % FB_text_size) / FB_text_size; // Pos in indirect's indirect
+		pos_in_block = ((pos - inode_size - indirect_size) % FB_text_size) % FB_text_size;
+		
+		if (f->fcb->double_indirect != TBA) {
+			iNode_indirect* aux_indirect = (iNode_indirect*) malloc(sizeof(iNode_indirect));
+			snorlax = DiskDriver_readBlock(disk, aux_indirect, f->fcb->single_indirect);
+			if (snorlax == TBA) {
+				printf ("ERROR READING - 3.5 @ iNodeFS_seek()\n");
+				
+				// Free memory
+				aux_indirect = NULL;
+				free (aux_indirect);
+				
+				return TBA;
+			}
+			
+			if (aux_indirect->file_blocks[pos_in_indirect] != TBA) {
+				snorlax = DiskDriver_readBlock(disk, aux_indirect, aux_indirect->file_blocks[pos_in_indirect]);
+				if (snorlax == TBA) {
+					printf ("ERROR READING - 3.5 @ iNodeFS_seek()\n");
+					
+					// Free memory
+					aux_indirect = NULL;
+					free (aux_indirect);
+					
+					return TBA;
+				}
+				
+				if (aux_indirect->file_blocks[pos_in_node] != TBA) {
+					FileBlock* aux_fb = (FileBlock*) malloc(sizeof(FileBlock));
+					snorlax = DiskDriver_readBlock(disk, aux_fb, aux_indirect->file_blocks[pos_in_node]);
+					if (snorlax == TBA) {
+						printf ("ERROR READING - 3.6 @ iNodeFS_seek()\n");
+						
+						// Free memory
+						aux_indirect = NULL;
+						free (aux_fb);
+						aux_fb = NULL;
+						free (aux_fb);
+						
+						return TBA;
+					}
+					
+					
+					// Updating f
+					f->current_block = &(aux_fb->header);
+					f->indirect = aux_indirect;
+					f->pos_in_node = pos_in_node;
+					f->pos_in_block = pos_in_block;
+					
+					return (pos_in_indirect + pos_in_node + pos_in_block);
+				}
+			}
+		}
 	}
 	
 	return TBA;
