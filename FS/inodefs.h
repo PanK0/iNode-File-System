@@ -171,6 +171,10 @@ DirectoryHandle* AUX_duplicate_dirhandle(DirectoryHandle* d);
 // Duplicates a file handle
 FileHandle* AUX_duplicate_filehandle(FileHandle* f);
 
+// puts the directoryhandle at the right place in the inode with side effect
+// mode == READ or WRITE
+void AUX_indirect_dir_management (DirectoryHandle* d, int mode);
+
 // creates an empty file in the directory d
 // returns null on error (file existing, no free blocks)
 // an empty file consists only of a iNode block of type FIL
