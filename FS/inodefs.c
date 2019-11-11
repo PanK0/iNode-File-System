@@ -1722,6 +1722,36 @@ int iNodeFS_changeDir(DirectoryHandle* d, char* dirname) {
 		}					
 	}
 	
+	// Single Indirect
+	if (d->dcb->single_indirect != TBA) {
+		iNode_indirect* single_indirect = (iNode_indirect*) malloc(sizeof(iNode_indirect));
+		snorlax = DiskDriver_readBlock(disk, single_indirect, d->dcb->single_indirect);
+		if (snorlax == TBA) {
+			printf ("ERROR READING @ iNodeFS_changeDir()\n");
+			
+			// Freeing memory
+			aux_node = NULL;
+			free (aux_node);
+			single_indirect = NULL;
+			free (single_indirect);
+			return TBA;
+		}
+		for (int i = 0; i < indirect_idx_size; ++i) {
+			if (single_indirect->file_blocks[i] != TBA) {
+				snorlax = DiskDriver_readBlock(disk, aux_node, single_indirect->file_blocks[i]);
+				if (snorlax != TBA) {
+					if (strcmp(aux_node->fcb.name, dirname) == 0 && aux_node->fcb.icb.node_type == DIR) {
+						d->directory = d->dcb;
+						d->dcb = aux_node;
+						d->current_block = &(aux_node->header);
+						
+						return 0;
+					}
+				}
+			}
+		}
+	}
+	
 	// Freeing memory
 	aux_node = NULL;
 	free (aux_node);
@@ -1743,28 +1773,34 @@ int iNodeFS_mkDir(DirectoryHandle* d, char* dirname) {
 	// Creating an iNode struct to store what I need
 	iNode* aux_node = (iNode*) malloc(sizeof(iNode));
 	int snorlax = TBA;
+	int filecount = 0;
 	
 	// Creating a copy of the dirhandle and searching for an already existent file
-	// daux->pos_in_node is set to TBA to lately check if there's need to extend the node
-	int search_flag = TBA;
+	// daux is set to first block of main inode to start the search
+	// first_free_occurrency will be lately set as a duplicate of daux
+	int first_free_flag = TBA;
 	DirectoryHandle* daux = AUX_duplicate_dirhandle(d);
-	daux->pos_in_node = TBA;
+	daux->indirect = NULL;
+	daux->current_block = &(daux->dcb->header);
+	daux->pos_in_node = 0;
+	daux->pos_in_block = 0;
+	DirectoryHandle* first_free_occurrency;
 	
 	// Search in the inode
 	for (int i = 0; i < inode_idx_size; ++i) {
 		if (d->dcb->file_blocks[i] == TBA) {
 			// Update the flag and save the first free occurrence
-			if (search_flag == TBA) {
-				search_flag = 0;
-				daux->pos_in_node = i;
-				daux->pos_in_block = 0;
+			if (first_free_flag == TBA) {
+				first_free_flag = 0;
+				first_free_occurrency = AUX_duplicate_dirhandle(daux);
 			}
 		}
 		// Reading the node to check for equal file name
 		// if snorlax == TBA, the block is free according to the bitmap
 		// else check the node name
 		else {
-			snorlax = DiskDriver_readBlock(disk, aux_node, d->dcb->file_blocks[i]);
+			++filecount;
+			snorlax = DiskDriver_readBlock(disk, aux_node, daux->dcb->file_blocks[i]);
 			if (snorlax != TBA) {
 				if (aux_node->fcb.icb.node_type == DIR && strcmp(aux_node->fcb.name, dirname) == 0) {
 					printf ("DIR %s ALREADY EXISTS. CREATION FAILED @ iNodeFS_mkdir()\n", dirname);
@@ -1774,25 +1810,70 @@ int iNodeFS_mkDir(DirectoryHandle* d, char* dirname) {
 					free (aux_node);		
 					daux = NULL;
 					free(daux);
+					first_free_occurrency = NULL;
+					free (first_free_occurrency);
 		
 					return TBA;
 				}
+				daux->current_block = &(aux_node->header);
 			}
-		}		
+		}
+		++daux->pos_in_node;		
+	}
+
+	// Manager call
+	// Check if we are in the single indirect
+	if (filecount == daux->pos_in_node) {
+		AUX_indirect_dir_management(daux, WRITE);
+	} else {
+		AUX_indirect_dir_management(daux, READ);
 	}
 	
-	// At this point is sure that does not exists a file with the same filename.
-	// Check if there's need to extend the node
-	if (daux->pos_in_node == TBA) {
-		printf ("NEED TO EXTEND THE NODE! @ iNodeFS_mkdir()\n");
-		
-		// Freeing memory
-		aux_node = NULL;
-		free (aux_node);		
-		daux = NULL;
-		free(daux);
-		
-		return TBA;
+	filecount = 0;
+	if (daux->indirect != NULL && daux->indirect->header.block_in_disk == daux->dcb->single_indirect) {
+		for (int i = 0; i < indirect_idx_size; ++i) {
+			if (daux->indirect->file_blocks[i] == TBA) {
+				// Update flag and save first free occurrence
+				if (first_free_flag == TBA) {
+					first_free_flag = 0;
+					first_free_occurrency = AUX_duplicate_dirhandle(daux);
+				}
+			}
+			// Reading the node to check for equal file name
+			else {
+				++filecount;
+				snorlax = DiskDriver_readBlock(disk, aux_node, daux->indirect->file_blocks[i]);
+				if (snorlax != TBA) {
+					if (aux_node->fcb.icb.node_type == DIR && strcmp(aux_node->fcb.name, dirname) == 0){
+						printf ("DIR %s ALREADY EXISTS. CREATION FAILED @ iNodeFS_mkdir()\n", dirname);
+								
+						// Freeing memory
+						aux_node = NULL;
+						free (aux_node);		
+						daux = NULL;
+						free(daux);
+						first_free_occurrency = NULL;
+						free (first_free_occurrency);
+			
+						return TBA;
+					}
+					daux->current_block = &(aux_node->header);
+				}
+			}
+			++daux->pos_in_node;
+		}
+	}
+	
+	// Manager call
+	// Check if we are in the double indirect 
+	if (filecount == daux->pos_in_node) {
+		AUX_indirect_dir_management(daux, WRITE);
+	} else {
+		AUX_indirect_dir_management(daux, READ);
+	}
+	
+	if (daux->indirect != NULL && daux->indirect->header.block_in_disk == daux->dcb->double_indirect) {
+		printf ("DOUBLE INDIRECT, DOUBLE TROUBLE\n");
 	}
 	
 	// Creation time
@@ -1852,19 +1933,35 @@ int iNodeFS_mkDir(DirectoryHandle* d, char* dirname) {
 		return TBA;
 	}
 	
-	// Updating DCB and dirhandle
-	d->dcb->file_blocks[daux->pos_in_node] = voyager;
+	// Updating dirhandle
+	// We are in the main node
+	if (first_free_occurrency->indirect == NULL) {
+		d->dcb->file_blocks[first_free_occurrency->pos_in_node] = voyager;
+	}
+	// Need another update
+	else {
+		first_free_occurrency->indirect->file_blocks[first_free_occurrency->pos_in_node] = voyager;
+		++first_free_occurrency->indirect->num_entries;
+		snorlax = DiskDriver_writeBlock(disk, first_free_occurrency->indirect, first_free_occurrency->indirect->header.block_in_disk);
+		if (snorlax == TBA) {
+			printf ("ERROR UPDATING DCB ON THE DISK @ iNodeFS_mkdir()\n");
+			return TBA;
+		}
+	}
 	d->dcb->num_entries += 1;
 	snorlax = DiskDriver_writeBlock(disk, d->dcb, d->dcb->header.block_in_disk);
 	if (snorlax == TBA) {
 		printf ("ERROR UPDATING DCB ON THE DISK @ iNodeFS_mkdir()\n");
-		return TBA;
+			return TBA;
 	}
-	d->pos_in_node = daux->pos_in_node;
 	
+	d = daux;
+		
 	// Freeing memory	
 	daux = NULL;
 	free(daux);
+	first_free_occurrency = NULL;
+	free (first_free_occurrency);
 	
 	return 0;
 }
