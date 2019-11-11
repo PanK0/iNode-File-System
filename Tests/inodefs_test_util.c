@@ -31,6 +31,8 @@ void iNodeFS_printHandle (void* h) {
 		printf ("-- You are now working in \n");
 		printf ("Directory             : %s\n", handle->dcb->fcb.name);
 		printf ("Size in Blocks        : %d\n", handle->dcb->fcb.size_in_blocks);
+		printf ("Single Indirect       : %d\n", handle->dcb->single_indirect);
+		printf ("Double Indirect       : %d\n", handle->dcb->double_indirect);
 		printf ("Size in Bytes         : %d\n", handle->dcb->fcb.size_in_bytes);
 		printf ("Is Dir?               : %d\n", handle->dcb->fcb.icb.node_type);
 		if (handle->indirect != NULL)
@@ -50,6 +52,8 @@ void iNodeFS_printHandle (void* h) {
 		printf ("-- You are now working in \n");
 		printf ("File                 : %s\n", handle->fcb->fcb.name);
 		printf ("Size in Blocks        : %d\n", handle->fcb->fcb.size_in_blocks);
+		printf ("Single Indirect       : %d\n", handle->fcb->single_indirect);
+		printf ("Double Indirect       : %d\n", handle->fcb->double_indirect);
 		printf ("Size in Bytes         : %d\n", handle->fcb->fcb.size_in_bytes);
 		printf ("Is Dir?               : %d\n", handle->fcb->fcb.icb.node_type);
 		if (handle->indirect != NULL)
