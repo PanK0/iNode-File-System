@@ -518,7 +518,7 @@ FileHandle* iNodeFS_createFile(DirectoryHandle* d, const char* filename) {
 	} else {
 		AUX_indirect_dir_management(daux, READ);
 	}
-	
+/*	
 	printf ("daux pos in node: %d\n", daux->pos_in_node);
 	printf ("daux pos in block: %d\n", daux->pos_in_node);
 	if (daux->indirect != NULL) printf ("daux indirect: %d\n", daux->indirect->icb.block_in_disk);
@@ -529,7 +529,7 @@ FileHandle* iNodeFS_createFile(DirectoryHandle* d, const char* filename) {
 	if (daux->indirect != NULL) printf ("FFO indirect: %d\n", first_free_occurrency->indirect->icb.block_in_disk);
 	else printf ("FFO is on the main node\n");
 	printf ("FFO current block: %d\n\n", first_free_occurrency->current_block->block_in_disk);
-	
+*/	
 	
 	if (daux->indirect != NULL && daux->indirect->header.block_in_disk == daux->dcb->double_indirect) {
 		printf ("DOUBLE INDIRECT, DOUBLE TROUBLE\n");
@@ -736,6 +736,37 @@ FileHandle* iNodeFS_openFile(DirectoryHandle* d, const char* filename) {
 				}
 			}
 		}					
+	}
+	
+	// Single Indirect
+	if (d->dcb->single_indirect != TBA) {
+		iNode_indirect* single_indirect = (iNode_indirect*) malloc(sizeof(iNode_indirect));
+		snorlax = DiskDriver_readBlock(disk, single_indirect, d->dcb->single_indirect);
+		if (snorlax == TBA) {
+			printf ("ERROR READING @ iNodeFS_openFile()\n");
+			
+			// Freeing Memoy
+			filehandle = NULL;
+			free (filehandle);
+			aux_node = NULL;
+			free (aux_node);
+			single_indirect = NULL;
+			free (single_indirect);
+			return NULL;
+		}
+		for (int i = 0; i < indirect_idx_size; ++i) {
+			if (single_indirect->file_blocks[i] != TBA) {
+				snorlax = DiskDriver_readBlock(disk, aux_node, single_indirect->file_blocks[i]);
+				if (snorlax != TBA) {
+					if (strcmp(aux_node->fcb.name, filename) == 0 && aux_node->fcb.icb.node_type == FIL){
+						filehandle->fcb = aux_node;
+						filehandle->current_block = &(aux_node->header);
+						
+						return filehandle;
+					}
+				}
+			}
+		}
 	}
 	
 	
