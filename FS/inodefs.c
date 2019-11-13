@@ -654,7 +654,104 @@ FileHandle* iNodeFS_createFile(DirectoryHandle* d, const char* filename) {
 */	
 	
 	if (daux->indirect != NULL && daux->indirect->header.block_in_disk == daux->dcb->double_indirect) {
-		printf ("DOUBLE INDIRECT, DOUBLE TROUBLE\n");
+		
+		int upper_pos = daux->indirect->header.block_in_disk;
+		
+		if (daux->indirect->file_blocks[daux->pos_in_node] == TBA) {
+			AUX_indirect_dir_management(daux, WRITE);
+		} else {
+			AUX_indirect_dir_management(daux, READ);
+		}
+		
+		iNode_indirect* upper = (iNode_indirect*) malloc(sizeof(iNode_indirect));
+		snorlax = DiskDriver_readBlock(disk, upper, upper_pos);
+		if (snorlax == TBA) {
+			printf ("ERROR READING @ iNodeFS_createFile()\n");
+			
+			// Freeing memory
+			aux_node = NULL;
+			free (aux_node);
+			daux = NULL;
+			free (daux);
+			first_free_occurrency = NULL;
+			free (first_free_occurrency);
+			upper = NULL;
+			free (upper);
+			
+			return NULL;
+		}
+		
+		// Now daux is on a NOD. The behavior shold be the same as in a single_indirect:
+		// Calling the manager at this point will automatically create another NOD if needed
+		for (int i = 0; i < indirect_idx_size; ++i) {
+			
+			if (upper->file_blocks[i] != TBA) {
+				filecount = 0;
+				if (daux->indirect != NULL && daux->indirect->icb.upper == daux->dcb->double_indirect) {
+					for (int i = 0; i < indirect_idx_size; ++i) {
+						if (daux->indirect->file_blocks[i] == TBA) {
+							// Update flag and save first free occurrency
+							if (first_free_flag == TBA) {
+								first_free_flag = 0;
+								first_free_occurrency = AUX_duplicate_dirhandle(daux);
+							}
+						}
+						// Reading the node to check for equal file name
+						else {
+							++filecount;
+							snorlax = DiskDriver_readBlock(disk, aux_node, daux->indirect->file_blocks[i]);
+							if (snorlax != TBA) {
+								if (aux_node->fcb.icb.node_type == FIL && strcmp(aux_node->fcb.name, filename) == 0) {
+									printf ("FILE %s ALREADY EXISTS. CREATION FAILED @ iNodeFS_createFile()\n", filename);
+						
+									// Freeing memory
+									aux_node = NULL;
+									free (aux_node);
+									daux = NULL;
+									free (daux);
+									first_free_occurrency = NULL;
+									free (first_free_occurrency);
+									upper = NULL;
+									free (upper);
+									
+									return NULL;
+								}
+								daux->current_block = &(aux_node->header);
+							}
+						}
+						++daux->pos_in_node;
+					}
+				}
+				if (filecount == daux->pos_in_node) {
+					AUX_indirect_dir_management(daux, WRITE);
+				} else {
+					AUX_indirect_dir_management(daux, READ);
+				}
+				snorlax = DiskDriver_readBlock(disk, upper, upper->header.block_in_disk);
+				if (snorlax == TBA) {			
+					printf ("ERROR READING - @ iNodeFS_mkdir()\n");
+							
+					// Freeing memory
+					aux_node = NULL;
+					free (aux_node);		
+					daux = NULL;
+					free(daux);
+					first_free_occurrency = NULL;
+					free (first_free_occurrency);
+					upper = NULL;
+					free (upper);
+
+					return NULL;
+				} 
+			}
+			else {
+				upper = NULL;
+				free (upper);
+				break;
+			}
+			
+		}
+		
 	}
 	
 	// Creation time
@@ -2087,6 +2184,8 @@ int iNodeFS_mkDir(DirectoryHandle* d, char* dirname) {
 				}				
 			}
 			else {
+				upper = NULL;
+				free (upper);
 				break;
 			}
 		}
