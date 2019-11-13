@@ -15,6 +15,7 @@
 
 #define SINGLE		-1
 #define DOUBLE		-2
+#define DOUBLE_NOD -4
 
 #define READ		0
 #define WRITE		1

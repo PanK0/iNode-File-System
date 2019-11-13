@@ -335,6 +335,18 @@ void AUX_indirect_dir_management (DirectoryHandle* d, int mode) {
 						return;
 					}
 					
+					// Updating d->indirect
+					d->indirect->file_blocks[d->pos_in_block] = aux_node->header.block_in_disk;
+					snorlax = DiskDriver_writeBlock(disk, d->indirect, d->indirect->header.block_in_disk);
+					if (snorlax == TBA) {
+						printf ("ERROR WRITING - @ AUX_indirect_dir_management()\n");
+						
+						// Freeing memory
+						aux_node = NULL;
+						free (aux_node);
+						return;
+					}
+					
 					// Updating d->dcb
 					d->dcb->fcb.size_in_blocks += 1;
 					d->dcb->fcb.size_in_bytes += BLOCK_SIZE;
@@ -379,18 +391,128 @@ void AUX_indirect_dir_management (DirectoryHandle* d, int mode) {
 				return;
 			}
 		}
-		/*** TO DO ***/
-		
 		// We are in a double indirect NOD
 		else if (d->indirect->icb.upper == d->dcb->double_indirect &&
 				d->indirect->header.block_in_disk != d->dcb->double_indirect) {
-		
 			// Check if it's full. if so, move to next one
-			
-			// NB if I'm in a double_indirect's NOD, all pointers of filehandle refers to it.
-			// I can go to the next NOD of double_indirect by looking ad NOD->header.block_in_node
-			
-			printf ("DISASTER \n");
+			// If the next one does not exists, create and move
+			if (d->pos_in_node < indirect_idx_size) return;
+			else {
+				// Read the parent node.
+				snorlax = DiskDriver_readBlock(disk, aux_node, d->indirect->icb.upper);
+				if (snorlax == TBA) {
+					printf ("ERROR READING - @ AUX_indirect_dir_management()\n");
+					
+					// Freeing memory)
+					aux_node = NULL;
+					free (aux_node);
+					return;
+				}
+				// check if the next NOD exists.
+				// if exists, move					
+				if (aux_node->file_blocks[d->indirect->header.block_in_node+1] != TBA) {
+					snorlax = DiskDriver_readBlock(disk, aux_node, aux_node->file_blocks[d->indirect->header.block_in_node+1]);
+					if (snorlax == TBA) {
+					printf ("ERROR READING - @ AUX_indirect_dir_management()\n");
+					
+					// Freeing memory)
+					aux_node = NULL;
+					free (aux_node);
+					return;
+					}
+					
+					d->indirect = aux_node;
+					d->current_block = &(aux_node->header);
+					d->pos_in_node = 0;
+					d->pos_in_block = 0;					
+				}
+				// else if it does not exists AND mod == WRITE, create and move
+				else if (aux_node->file_blocks[d->indirect->header.block_in_node+1] == TBA &&
+						mode == WRITE) {
+					iNode_indirect* another_node = (iNode_indirect*) malloc(sizeof(iNode_indirect));
+					memset(another_node, 0, BLOCK_SIZE);
+					int voyager = DiskDriver_getFreeBlock(disk, 0);
+					if (voyager == TBA) {
+						printf ("ERROR DISK FULL - @ AUX_indirect_dir_management()\n");
+						return;
+					}
+					
+					// Creating blockheader
+					BlockHeader header;
+					header.block_in_file = TBA;
+					header.block_in_node = d->indirect->header.block_in_node+1;
+					header.block_in_disk = voyager;
+					
+					// Creating icb
+					iNodeControlBlock icb;
+					if (d->directory != NULL) {
+						icb.directory_block = d->directory->header.block_in_disk;
+					} else icb.directory_block = TBA;
+					icb.block_in_disk = header.block_in_disk;
+					icb.upper = aux_node->header.block_in_disk;
+					icb.node_type = NOD;
+					
+					// NOD stuffs
+					another_node->header = header;
+					another_node->icb = icb;
+					another_node->num_entries = 0;
+					for (int i = 0; i < indirect_idx_size; ++i) {
+						another_node->file_blocks[i] = TBA;
+					}
+					
+					// Writing on the disk
+					snorlax = DiskDriver_writeBlock(disk, another_node, another_node->header.block_in_disk);
+					if (snorlax == TBA) {
+						printf ("ERROR WRITING - @ AUX_indirect_dir_management()\n");
+						
+						// Freeing memory
+						aux_node = NULL;
+						free (aux_node);
+						another_node = NULL;
+						free (another_node);
+						return;
+					}
+					
+					// Updating aux_node
+					aux_node->file_blocks[another_node->header.block_in_node] = another_node->header.block_in_disk;
+					snorlax = DiskDriver_writeBlock(disk, aux_node, aux_node->header.block_in_disk);
+					if (snorlax == TBA) {
+						printf ("ERROR WRITING - @ AUX_indirect_dir_management()\n");
+						
+						// Freeing memory
+						aux_node = NULL;
+						free (aux_node);
+						another_node = NULL;
+						free (another_node);
+						return;
+					}
+					
+					// Update d->dcb sizes
+					d->dcb->fcb.size_in_blocks += 1;
+					d->dcb->fcb.size_in_bytes += BLOCK_SIZE;
+					snorlax = DiskDriver_writeBlock(disk, d->dcb, d->dcb->header.block_in_disk);
+					if (snorlax == TBA) {
+						printf ("ERROR WRITING - @ AUX_indirect_dir_management()\n");
+						
+						// Freeing memory
+						aux_node = NULL;
+						free (aux_node);
+						another_node = NULL;
+						free (another_node);
+						return;
+					}
+					
+					// Updating d
+					d->indirect = another_node;
+					d->current_block = &(another_node->header);
+					d->pos_in_node = 0;
+					d->pos_in_block = 0;
+					
+					// Freeing aux_node
+					aux_node = NULL;
+					free (aux_node);
+				}
+			}
 		}
 	}
 	
@@ -1872,9 +1994,116 @@ int iNodeFS_mkDir(DirectoryHandle* d, char* dirname) {
 		AUX_indirect_dir_management(daux, READ);
 	}
 	
+	// Once here, just calla the manager to check if it's necessary to create a new NOD or not
 	if (daux->indirect != NULL && daux->indirect->header.block_in_disk == daux->dcb->double_indirect) {
-		printf ("DOUBLE INDIRECT, DOUBLE TROUBLE\n");
+		
+		int upper_pos = daux->indirect->header.block_in_disk;	
+			
+		if (daux->indirect->file_blocks[daux->pos_in_node] == TBA) {
+			AUX_indirect_dir_management(daux, WRITE);
+		} else {
+			AUX_indirect_dir_management(daux, READ);
+		}
+		
+		iNode_indirect* upper = (iNode_indirect*) malloc(sizeof(iNode_indirect));
+		snorlax = DiskDriver_readBlock(disk, upper, upper_pos);
+		if (snorlax == TBA) {			
+			printf ("ERROR READING - @ iNodeFS_mkdir()\n");
+					
+			// Freeing memory
+			aux_node = NULL;
+			free (aux_node);		
+			daux = NULL;
+			free(daux);
+			first_free_occurrency = NULL;
+			free (first_free_occurrency);
+			upper = NULL;
+			free (upper);
+
+			return TBA;
+		}		
+	
+		// Now daux is on a NOD. The behavior shold be the same as in a single_indirect:
+		// Calling the manager at this point will automatically create another NOD if needed
+		 for (int i = 0; i < indirect_idx_size; ++i) {
+			
+			if (upper->file_blocks[i] != TBA) {
+				filecount = 0;
+				if (daux->indirect != NULL && daux->indirect->icb.upper == daux->dcb->double_indirect) {
+					for (int i = 0; i < indirect_idx_size; ++i) {
+						if (daux->indirect->file_blocks[i] == TBA) {
+							// Update flag and save first free occurrence
+							if (first_free_flag == TBA) {
+								first_free_flag = 0;
+								first_free_occurrency = AUX_duplicate_dirhandle(daux);
+							}
+						}
+						// Reading the node to check for equal file name
+						else {
+							++filecount;
+							snorlax = DiskDriver_readBlock(disk, aux_node, daux->indirect->file_blocks[i]);
+							if (snorlax != TBA) {
+								if (aux_node->fcb.icb.node_type == DIR && strcmp(aux_node->fcb.name, dirname) == 0) {
+									printf ("DIR %s ALREADY EXISTS. CREATION FAILED @ iNodeFS_mkdir()\n", dirname);
+									
+									// Freeing memory
+									aux_node = NULL;
+									free (aux_node);
+									daux = NULL;
+									free (daux);
+									first_free_occurrency = NULL;
+									free (first_free_occurrency);
+									upper = NULL;
+									free (upper);
+									
+									return TBA;
+								}
+								daux->current_block = &(aux_node->header);
+							}
+						}
+						++daux->pos_in_node;
+					}
+				}
+				if (filecount == daux->pos_in_node) {
+					AUX_indirect_dir_management(daux, WRITE);
+				} else {
+					AUX_indirect_dir_management(daux, READ);
+				}
+				snorlax = DiskDriver_readBlock(disk, upper, upper->header.block_in_disk);
+				if (snorlax == TBA) {			
+					printf ("ERROR READING - @ iNodeFS_mkdir()\n");
+							
+					// Freeing memory
+					aux_node = NULL;
+					free (aux_node);		
+					daux = NULL;
+					free(daux);
+					first_free_occurrency = NULL;
+					free (first_free_occurrency);
+					upper = NULL;
+					free (upper);
+
+					return TBA;
+				}				
+			}
+			else {
+				break;
+			}
+		}
 	}
+	
+/*		
+	printf ("daux pos in node: %d\n", daux->pos_in_node);
+	printf ("daux pos in block: %d\n", daux->pos_in_node);
+	if (daux->indirect != NULL) printf ("daux indirect: %d\n", daux->indirect->icb.block_in_disk);
+	else printf ("daux is on the main node\n");
+	printf ("daux current block: %d\n", daux->current_block->block_in_disk);
+	printf ("FFO pos in node: %d\n", first_free_occurrency->pos_in_node);
+	printf ("FFO pos in block: %d\n", first_free_occurrency->pos_in_node);
+	if (daux->indirect != NULL) printf ("FFO indirect: %d\n", first_free_occurrency->indirect->icb.block_in_disk);
+	else printf ("FFO is on the main node\n");
+	printf ("FFO current block: %d\n\n", first_free_occurrency->current_block->block_in_disk);
+*/
 	
 	// Creation time
 	memset(aux_node, 0, BLOCK_SIZE);

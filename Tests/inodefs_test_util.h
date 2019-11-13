@@ -2,7 +2,7 @@
 #include "../FS/inodefs.c"
 #include <stdlib.h>
 
-#define NUM_BLOCKS 	500
+#define NUM_BLOCKS 	1000
 #define NUM_FILES	400
 #define MAX_CMD_LEN	128
 #define BACK		".."
