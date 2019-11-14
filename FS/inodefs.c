@@ -907,13 +907,62 @@ int iNodeFS_readDir(char** names, DirectoryHandle* d) {
 				}
 			}
 		}
+		// Freeing memory
+		single_indirect = NULL;
+		free (single_indirect);
 	}
 	
+	// Double Indirect
+	if (d->dcb->double_indirect != TBA) {
+		iNode_indirect* double_indirect = (iNode_indirect*) malloc(sizeof(iNode_indirect));
+		snorlax = DiskDriver_readBlock(disk, double_indirect, d->dcb->double_indirect);
+		if (snorlax == TBA) {
+			printf ("ERROR READING @ iNodeFS_readDir()\n");
+			
+			// Freeing memory
+			aux_node = NULL;
+			free (aux_node);
+			double_indirect = NULL;
+			free (double_indirect);
+			return TBA;
+		}
+		iNode_indirect* nod = (iNode_indirect*) malloc(sizeof(iNode_indirect));
+		for (int i = 0; i < indirect_idx_size; ++i) {
+			if (double_indirect->file_blocks[i] != TBA) {
+				snorlax = DiskDriver_readBlock(disk, nod, double_indirect->file_blocks[i]);
+				if (snorlax == TBA) {
+					printf ("ERROR READING @ iNodeFS_readDir()\n");
+			
+					// Freeing memory
+					aux_node = NULL;
+					free (aux_node);
+					double_indirect = NULL;
+					free (double_indirect);
+					nod = NULL;
+					free (nod);
+					return TBA;
+				}
+				for (int k = 0; k < indirect_idx_size; ++k) {
+					if (nod->file_blocks[k] != TBA) {
+						snorlax = DiskDriver_readBlock(disk, aux_node, nod->file_blocks[k]);
+						if (snorlax != TBA) {
+							strcpy(names[j], aux_node->fcb.name);
+							++j;
+						}
+					}
+				}
+			}
+		}
+		// Freeing memory
+		nod = NULL;
+		free (nod);
+		double_indirect = NULL;
+		free (double_indirect);	
+	}
 	
 	// Freeing memory
 	aux_node = NULL;
 	free (aux_node);
-	
 	return j;
 }
 
@@ -981,11 +1030,77 @@ FileHandle* iNodeFS_openFile(DirectoryHandle* d, const char* filename) {
 						filehandle->fcb = aux_node;
 						filehandle->current_block = &(aux_node->header);
 						
+						// Freeing memory
+						single_indirect = NULL;
+						free (single_indirect);
+						
 						return filehandle;
 					}
 				}
 			}
 		}
+		// Freeing memory
+		single_indirect = NULL;
+		free (single_indirect);
+	}
+	
+	// Double Indirect
+	if (d->dcb->double_indirect != TBA) {
+		iNode_indirect* double_indirect = (iNode_indirect*) malloc(sizeof(iNode_indirect));
+		snorlax = DiskDriver_readBlock(disk, double_indirect, d->dcb->double_indirect);
+		if (snorlax == TBA) {
+			printf ("ERROR READING @ iNodeFS_openFile()\n");
+			
+			// Freeing memory
+			aux_node = NULL;
+			free (aux_node);
+			double_indirect = NULL;
+			free (double_indirect);
+			return NULL;
+		}
+		iNode_indirect* nod = (iNode_indirect*) malloc(sizeof(iNode_indirect));
+		for (int i = 0; i < indirect_idx_size; ++i) {
+			if (double_indirect->file_blocks[i] != TBA) {
+				snorlax = DiskDriver_readBlock(disk, nod, double_indirect->file_blocks[i]);
+				if (snorlax == TBA) {
+					printf ("ERROR READING @ iNodeFS_openFile()\n");
+			
+					// Freeing memory
+					aux_node = NULL;
+					free (aux_node);
+					double_indirect = NULL;
+					free (double_indirect);
+					nod = NULL;
+					free (nod);
+					return NULL;
+				}
+				for (int j = 0; j < indirect_idx_size; ++j) {
+					if (nod->file_blocks[j] != TBA) {
+						snorlax = DiskDriver_readBlock(disk, aux_node, nod->file_blocks[j]);
+						if (snorlax != TBA) {
+							if (strcmp(aux_node->fcb.name, filename) == 0 && aux_node->fcb.icb.node_type == FIL) {
+								filehandle->fcb = aux_node;
+								filehandle->current_block = &(aux_node->header);
+								
+								// Freeing memory
+								double_indirect = NULL;
+								free (double_indirect);
+								nod = NULL;
+								free (nod);
+								
+								return filehandle;
+							}
+						}
+					}
+				}
+			}
+		}
+		// Freeing memory
+		double_indirect = NULL;
+		free (double_indirect);
+		nod = NULL;
+		free (nod);
+		return NULL;
 	}
 	
 	
