@@ -84,6 +84,7 @@ int main (int argc, char** argv) {
 			// print actual directory location
 			else if (strcmp(cmd1, DIR_SHOW) == 0) {
 				iNodeFS_printHandle(dirhandle);
+				//iNodeFS_printNodeBlocks(dirhandle, dirhandle->dcb);
 			}
 						
 			// create a dir
@@ -131,6 +132,7 @@ int main (int argc, char** argv) {
 			// print actual file proprieties
 			else if (strcmp(cmd1, FILE_SHOW) == 0) {
 				iNodeFS_printHandle(filehandle);
+				//iNodeFS_printNodeBlocks(dirhandle, filehandle->fcb);
 			}
 			
 			// Create a file
@@ -175,6 +177,21 @@ int main (int argc, char** argv) {
 				ret = iNodeFS_write(filehandle, omero, sizeof(omero));
 				printf ("written bytes : %d - from OMERO\n", ret);
 			}
+			
+			// write (Dante + Omero) * n times
+			else if (strcmp(cmd1, FILE_LONG) == 0) {
+				if (atoi(cmd2) > NUM_BLOCKS) printf (RED "TOO LARGE FILE\n" COLOR_RESET);
+				for (int i = 0; i < atoi(cmd2); ++i) {
+					ret = iNodeFS_write(filehandle, "@@@@@", 5);
+					filehandle->pos_in_block -= 1;
+					ret = iNodeFS_write(filehandle, dante, sizeof(dante));
+					filehandle->pos_in_block -= 1;
+					ret = iNodeFS_write(filehandle, "#####", 5);
+					filehandle->pos_in_block -= 1;
+					ret = iNodeFS_write(filehandle, omero, sizeof(omero));
+					filehandle->pos_in_block -= 1;
+				}
+			}
 		
 			// seek
 			else if (strcmp(cmd1, FILE_SEEK) == 0) {
@@ -184,7 +201,7 @@ int main (int argc, char** argv) {
 			
 			// read a file
 			else if (strcmp(cmd1, FILE_READ) == 0 && filehandle != NULL) {
-				int cmd_len = filehandle->fcb->fcb.size_in_bytes;
+				int cmd_len = filehandle->fcb->num_entries;
 				char text[cmd_len];
 				for (int i = 0; i < cmd_len; ++i) text[i] = 0;
 				ret = iNodeFS_read(filehandle, text, cmd_len);

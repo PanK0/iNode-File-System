@@ -63,6 +63,7 @@ void iNodeFS_printHandle (void* h) {
 		printf ("Block in file         : %d\n", handle->current_block->block_in_file);
 		printf ("Parent dir's block    : %d\n", handle->fcb->fcb.icb.directory_block); 
 		//printf ("Pos in file           : %d\n", handle->pos_in_file);
+		printf ("Data size             : %d\n", handle->fcb->num_entries);
 		printf ("Position in node      : %d\n", handle->pos_in_node);
 		printf ("Position in block     : %d\n", handle->pos_in_block);
 	}
