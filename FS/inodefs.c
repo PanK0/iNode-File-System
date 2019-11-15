@@ -3067,8 +3067,6 @@ int iNodeFS_remove(DirectoryHandle* d, char* filename) {
 						
 						d->dcb->file_blocks[i] = TBA;
 						d->dcb->num_entries -= 1;
-						d->dcb->fcb.size_in_bytes -= BLOCK_SIZE;
-						d->dcb->fcb.size_in_blocks -= 1;
 						snorlax = DiskDriver_writeBlock(disk, d->dcb, d->dcb->header.block_in_disk);
 						if (snorlax == TBA) {
 							printf ("ERROR WRITING @ iNodeFS_remove()\n");
@@ -3096,7 +3094,425 @@ int iNodeFS_remove(DirectoryHandle* d, char* filename) {
 			}
 		}
 	}
-
+	
+	// Single indirect
+	if (d->dcb->single_indirect == TBA) return 0;
+	iNode_indirect s_indirect;
+	snorlax = DiskDriver_readBlock(disk, &s_indirect, d->dcb->single_indirect);
+	if (snorlax == TBA) return TBA;
+	for (int i = 0; i < indirect_idx_size; ++i) {
+		if (s_indirect.file_blocks[i] != TBA) {
+			snorlax = DiskDriver_readBlock(disk, aux_node, s_indirect.file_blocks[i]);
+			if (snorlax != TBA) {
+				if (strcmp(aux_node->fcb.name, filename) == 0) {
+					// if FIL
+					if (aux_node->fcb.icb.node_type == FIL) {
+		
+						// Main node
+						for (int i = 0; i < inode_idx_size; ++i) {
+							if (aux_node->file_blocks[i] != TBA) {
+								ret = DiskDriver_freeBlock(disk, aux_node->file_blocks[i]);
+								if (ret == TBA) return TBA;
+								aux_node->file_blocks[i] = TBA;
+							}
+						}
+						// Update
+						snorlax = DiskDriver_writeBlock(disk, aux_node, aux_node->header.block_in_disk);
+						if (snorlax == TBA) {
+							printf ("ERROR WRITING @ iNodeFS_remove()\n");
+							
+							// Freeing memory
+							daux = NULL;
+							free (daux);
+							aux_node = NULL;
+							free (aux_node);
+							return TBA;
+						}
+						
+						// Single indirect
+						if (aux_node->single_indirect != TBA) {
+							iNode_indirect single_indirect;
+							snorlax = DiskDriver_readBlock(disk, &single_indirect, aux_node->single_indirect);
+							if (snorlax == TBA) return TBA;
+							
+							for (int i = 0; i < indirect_idx_size; ++i) {
+								if (single_indirect.file_blocks[i] != TBA) {
+									ret = DiskDriver_freeBlock(disk, single_indirect.file_blocks[i]);
+									if (ret == TBA) return TBA;
+									single_indirect.file_blocks[i] = TBA;
+								}
+							}
+							// Update single
+							snorlax = DiskDriver_writeBlock(disk, &single_indirect, single_indirect.header.block_in_disk);
+							if (snorlax == TBA) return TBA;		
+							ret = DiskDriver_freeBlock(disk, aux_node->single_indirect);
+							if (ret == TBA) return TBA;					
+						}
+						// Double indirect
+						if (aux_node->double_indirect != TBA) {
+							iNode_indirect double_indirect;
+							snorlax = DiskDriver_readBlock(disk, &double_indirect, aux_node->double_indirect);
+							if (snorlax == TBA) return TBA;
+							
+							for (int i = 0; i < indirect_idx_size; ++i) {
+								if (double_indirect.file_blocks[i] != TBA) {
+									iNode_indirect nod;
+									snorlax = DiskDriver_readBlock(disk, &nod, double_indirect.file_blocks[i]);
+									if (snorlax == TBA) return TBA;
+									for (int j = 0; j < indirect_idx_size; ++j) {
+										if (nod.file_blocks[j] != TBA) {
+											ret = DiskDriver_freeBlock(disk, nod.file_blocks[j]);
+											if (ret == TBA) return TBA;
+											nod.file_blocks[j] = TBA;
+										}
+									}
+									// Update nod
+									snorlax = DiskDriver_writeBlock(disk, &nod, nod.header.block_in_disk);
+								}
+								ret = DiskDriver_freeBlock(disk, double_indirect.file_blocks[i]);
+								if (ret == TBA) return TBA;
+								double_indirect.file_blocks[i] = TBA;								
+							}
+							// Update double
+							snorlax = DiskDriver_writeBlock(disk, &double_indirect, double_indirect.header.block_in_disk);
+							ret = DiskDriver_freeBlock(disk, aux_node->double_indirect);
+							if (ret == TBA) return TBA;
+						}
+						
+						// delete the indirects and the inode
+						ret = DiskDriver_freeBlock(disk, aux_node->header.block_in_disk);
+						if (ret == TBA) return TBA;
+						
+						// Update s_indirect and d->dcb
+						s_indirect.file_blocks[i] = TBA;
+						snorlax = DiskDriver_writeBlock(disk, &s_indirect, s_indirect.header.block_in_disk);
+						if (snorlax == TBA) return TBA;
+						d->dcb->num_entries -= 1;
+						snorlax = DiskDriver_writeBlock(disk, d->dcb, d->dcb->header.block_in_disk);
+						if (snorlax == TBA) {
+							printf ("ERROR WRITING @ iNodeFS_remove()\n");
+							
+							// Freeing memory
+							daux = NULL;
+							free (daux);
+							aux_node = NULL;
+							free (aux_node);
+							return TBA;
+						}						
+					}
+					
+					// if DIR
+					else if (aux_node->fcb.icb.node_type == DIR) {
+						ret = iNodeFS_changeDir(daux, aux_node->fcb.name);
+						if (ret == TBA) return TBA;
+						ret = iNodeFS_remove(daux, aux_node->fcb.name);
+						if (ret == TBA) return TBA;
+						
+						// Main node
+						for (int i = 0; i < inode_idx_size; ++i) {
+							if (aux_node->file_blocks[i] != TBA) {								
+								ret = DiskDriver_freeBlock(disk, aux_node->file_blocks[i]);
+								if (ret == TBA) return TBA;
+								aux_node->file_blocks[i] = TBA;
+							}
+						}
+						// Update
+						snorlax = DiskDriver_writeBlock(disk, aux_node, aux_node->header.block_in_disk);
+						if (snorlax == TBA) {
+							printf ("ERROR WRITING @ iNodeFS_remove()\n");
+							
+							// Freeing memory
+							daux = NULL;
+							free (daux);
+							aux_node = NULL;
+							free (aux_node);
+							return TBA;
+						}
+						
+						// Single indirect
+						if (aux_node->single_indirect != TBA) {
+							iNode_indirect single_indirect;
+							snorlax = DiskDriver_readBlock(disk, &single_indirect, aux_node->single_indirect);
+							if (snorlax == TBA) return TBA;
+							
+							for (int i = 0; i < indirect_idx_size; ++i) {
+								if (single_indirect.file_blocks[i] != TBA) {
+									ret = DiskDriver_freeBlock(disk, single_indirect.file_blocks[i]);
+									if (ret == TBA) return TBA;
+								}
+							}
+							// Update single
+							snorlax = DiskDriver_writeBlock(disk, &single_indirect, single_indirect.header.block_in_disk);
+							if (snorlax == TBA) return TBA;
+							ret = DiskDriver_freeBlock(disk, aux_node->single_indirect);
+							if (ret == TBA) return TBA;
+						}
+						
+						// Double indirect
+						if (aux_node->double_indirect != TBA) {
+							iNode_indirect double_indirect;
+							snorlax = DiskDriver_readBlock(disk, &double_indirect, aux_node->double_indirect);
+							if (snorlax == TBA) return TBA;
+							
+							for (int i = 0; i < indirect_idx_size;++i) {
+								if (double_indirect.file_blocks[i] != TBA) {
+									iNode_indirect nod;
+									snorlax = DiskDriver_readBlock(disk, &nod, double_indirect.file_blocks[i]);
+									if (snorlax == TBA) return TBA;
+									for (int j = 0; j < indirect_idx_size; ++j) {
+										if (nod.file_blocks[j] != TBA) {
+											ret = DiskDriver_freeBlock(disk, nod.file_blocks[j]);
+											if (ret == TBA) return TBA;
+											nod.file_blocks[j] = TBA;
+										}
+									}
+									// update nod
+									snorlax = DiskDriver_writeBlock(disk, &nod, nod.header.block_in_disk);
+									if (snorlax == TBA) {
+										printf ("ERROR WRITING @ iNodeFS_remove()\n");
+							
+										// Freeing memory
+										daux = NULL;
+										free (daux);
+										aux_node = NULL;
+										free (aux_node);
+										return TBA;
+									}
+								}
+								ret = DiskDriver_freeBlock(disk, double_indirect.file_blocks[i]);
+								if (ret == TBA) return TBA;
+								double_indirect.file_blocks[i] = TBA;
+							}
+							// Update double
+							snorlax = DiskDriver_writeBlock(disk, &double_indirect, double_indirect.header.block_in_disk);
+							ret = DiskDriver_freeBlock(disk, aux_node->double_indirect);
+							if (ret == TBA) return TBA;
+						}
+						
+						// Freeing aux_node and updating s_indirect and d->dcb
+						ret = DiskDriver_freeBlock(disk, aux_node->header.block_in_disk);
+						if (ret == TBA) return TBA;
+						
+						s_indirect.file_blocks[i] = TBA;
+						snorlax = DiskDriver_writeBlock(disk, &s_indirect, s_indirect.header.block_in_disk);
+						if (snorlax == TBA) return TBA;
+						d->dcb->num_entries -= 1;
+						snorlax = DiskDriver_writeBlock(disk, d->dcb, d->dcb->header.block_in_disk);
+						if (snorlax == TBA) {
+							printf ("ERROR WRITING @ iNodeFS_remove()\n");
+							
+							// Freeing memory
+							daux = NULL;
+							free (daux);
+							aux_node = NULL;
+							free (aux_node);
+							return TBA;
+						}
+						
+					}
+					else return TBA;
+					
+				}
+			}
+		}
+	}
+	
+	// Double indirect
+	if (d->dcb->double_indirect == TBA) return 0;
+	iNode_indirect d_indirect;
+	snorlax = DiskDriver_readBlock(disk, &d_indirect, d->dcb->double_indirect);
+	if (snorlax == TBA) return TBA;
+	for (int i = 0; i < indirect_idx_size; ++i) {
+		if (d_indirect.file_blocks[i] != TBA) {
+			iNode_indirect nod_indirect;
+			snorlax = DiskDriver_readBlock(disk, &nod_indirect, d_indirect.file_blocks[i]);
+			if (snorlax == TBA) return TBA;
+			for (int j = 0; j < indirect_idx_size; ++j) {
+				if (nod_indirect.file_blocks[j] != TBA) {
+					snorlax = DiskDriver_readBlock(disk, aux_node, nod_indirect.file_blocks[j]);
+					if (snorlax != TBA) {
+						if (strcmp(aux_node->fcb.name, filename) == 0) {
+							// if FIL
+							if (aux_node->fcb.icb.node_type == FIL) {
+								
+								// Main node
+								for (int i = 0; i < inode_idx_size; ++i) {
+									if (aux_node->file_blocks[i] != TBA) {
+										ret = DiskDriver_freeBlock(disk, aux_node->file_blocks[i]);
+										if (ret == TBA) return TBA;
+										aux_node->file_blocks[i] = TBA;
+									}
+								}
+								// Update
+								snorlax = DiskDriver_writeBlock(disk, aux_node, aux_node->header.block_in_disk);
+								if (snorlax == TBA) return TBA;
+								
+								// Single indirect
+								if (aux_node->single_indirect != TBA) {
+									iNode_indirect single_indirect;
+									snorlax = DiskDriver_readBlock(disk, &single_indirect, aux_node->single_indirect);
+									if (snorlax == TBA) return TBA;
+									
+									for (int i = 0; i < indirect_idx_size; ++i) {
+										if (single_indirect.file_blocks[i] != TBA) {
+											ret = DiskDriver_freeBlock(disk, single_indirect.file_blocks[i]);
+											if (ret == TBA) return TBA;
+											single_indirect.file_blocks[i] = TBA;
+										}
+									}
+									// Update single
+									snorlax = DiskDriver_writeBlock(disk, &single_indirect, single_indirect.header.block_in_disk);
+									if (snorlax == TBA) return TBA;	
+									ret = DiskDriver_freeBlock(disk, aux_node->single_indirect);
+									if (ret == TBA) return TBA;								
+								}
+								// Double indirect
+								if (aux_node->double_indirect != TBA) {
+									iNode_indirect double_indirect;
+									snorlax = DiskDriver_readBlock(disk, &double_indirect, aux_node->double_indirect);
+									if (snorlax == TBA) return TBA;
+									
+									for (int i = 0; i < indirect_idx_size; ++i) {
+										if (double_indirect.file_blocks[i] != TBA) {
+											iNode_indirect nod;
+											snorlax = DiskDriver_readBlock(disk, &nod, double_indirect.file_blocks[i]);
+											if (snorlax == TBA) return TBA;
+											for (int j = 0; j < indirect_idx_size; ++j) {
+												if (nod.file_blocks[j] != TBA) {
+													ret = DiskDriver_freeBlock(disk, nod.file_blocks[j]);
+													if (ret == TBA) return TBA;
+													nod.file_blocks[j] = TBA;
+												}
+											}
+											// Update nod
+											snorlax = DiskDriver_writeBlock(disk, &nod, nod.header.block_in_disk);
+										}
+										ret = DiskDriver_freeBlock(disk, double_indirect.file_blocks[i]);
+										if (ret == TBA) return TBA;
+										double_indirect.file_blocks[i] = TBA;
+									}
+									// Update double
+									snorlax = DiskDriver_writeBlock(disk, &double_indirect, double_indirect.header.block_in_disk);
+									ret = DiskDriver_freeBlock(disk, aux_node->double_indirect);
+									if (ret == TBA) return TBA;
+									
+								} // END aux_node research
+								
+								// Delete the indirects and the inode
+								ret = DiskDriver_freeBlock(disk, aux_node->header.block_in_disk);
+								if (ret == TBA) return TBA;
+								
+								// update nod_indirect and d->dcb
+								nod_indirect.file_blocks[j] = TBA;
+								snorlax = DiskDriver_writeBlock(disk, &nod_indirect, nod_indirect.header.block_in_disk);
+								if (snorlax == TBA) return TBA;
+								
+								d->dcb->num_entries -= 1;
+								snorlax = DiskDriver_writeBlock(disk, d->dcb, d->dcb->header.block_in_disk);
+								if (snorlax == TBA) return TBA;
+								
+							}
+							// if DIR
+							else if (aux_node->fcb.icb.node_type == DIR) {
+								ret = iNodeFS_changeDir(daux, aux_node->fcb.name);
+								if (ret == TBA) return TBA;
+								ret = iNodeFS_remove(daux, aux_node->fcb.name);
+								if (ret == TBA) return TBA;
+								
+								// Main node
+								for (int i = 0; i < inode_idx_size; ++i) {
+									if (aux_node->file_blocks[i] != TBA) {								
+										ret = DiskDriver_freeBlock(disk, aux_node->file_blocks[i]);
+										if (ret == TBA) return TBA;
+										aux_node->file_blocks[i] = TBA;
+									}
+								}
+								// Update
+								snorlax = DiskDriver_writeBlock(disk, aux_node, aux_node->header.block_in_disk);
+								if (snorlax == TBA) return TBA;
+								
+								// Single indirect
+								if (aux_node->single_indirect != TBA) {
+									iNode_indirect single_indirect;
+									snorlax = DiskDriver_readBlock(disk, &single_indirect, aux_node->single_indirect);
+									if (snorlax == TBA) return TBA;
+									
+									for (int i = 0; i < indirect_idx_size; ++i) {
+										if (single_indirect.file_blocks[i] != TBA) {
+											ret = DiskDriver_freeBlock(disk, single_indirect.file_blocks[i]);
+											if (ret == TBA) return TBA;
+											single_indirect.file_blocks[i] = TBA;
+										}
+									}
+									// Update single
+									snorlax = DiskDriver_writeBlock(disk, &single_indirect, single_indirect.header.block_in_disk);
+									if (snorlax == TBA) return TBA;
+									ret = DiskDriver_freeBlock(disk, aux_node->single_indirect);
+									if (ret == TBA) return TBA;
+								}
+								
+								// Double indirect
+								if (aux_node->double_indirect != TBA) {
+									iNode_indirect double_indirect;
+									snorlax = DiskDriver_readBlock(disk, &double_indirect, aux_node->double_indirect);
+									if (snorlax == TBA) return TBA;
+									
+									for (int i = 0; i < indirect_idx_size;++i) {
+										if (double_indirect.file_blocks[i] != TBA) {
+											iNode_indirect nod;
+											snorlax = DiskDriver_readBlock(disk, &nod, double_indirect.file_blocks[i]);
+											if (snorlax == TBA) return TBA;
+											for (int j = 0; j < indirect_idx_size; ++j) {
+												if (nod.file_blocks[j] != TBA) {
+													ret = DiskDriver_freeBlock(disk, nod.file_blocks[j]);
+													if (ret == TBA) return TBA;
+													nod.file_blocks[j] = TBA;
+												}
+											}
+											// update nod
+											snorlax = DiskDriver_writeBlock(disk, &nod, nod.header.block_in_disk);
+											if (snorlax == TBA) {
+												printf ("ERROR WRITING @ iNodeFS_remove()\n");
+									
+												// Freeing memory
+												daux = NULL;
+												free (daux);
+												aux_node = NULL;
+												free (aux_node);
+												return TBA;
+											}
+										}
+										ret = DiskDriver_freeBlock(disk, double_indirect.file_blocks[i]);
+										if (ret == TBA) return TBA;
+										double_indirect.file_blocks[i] = TBA;
+									}
+									// Update double
+									snorlax = DiskDriver_writeBlock(disk, &double_indirect, double_indirect.header.block_in_disk);
+									ret = DiskDriver_freeBlock(disk, aux_node->double_indirect);
+									if (ret == TBA) return TBA;
+								} //END aux_node research
+								
+								// Delete  the indirects
+								ret = DiskDriver_freeBlock(disk, aux_node->header.block_in_disk);
+								if (ret == TBA) return TBA;
+								
+								// update nod_indirect and d->dcb
+								nod_indirect.file_blocks[j] = TBA;
+								snorlax = DiskDriver_writeBlock(disk, &nod_indirect, nod_indirect.header.block_in_disk);
+								if (snorlax == TBA) return TBA;
+								
+								d->dcb->num_entries -= 1;
+								snorlax = DiskDriver_writeBlock(disk, d->dcb, d->dcb->header.block_in_disk);
+								if (snorlax == TBA) return TBA;
+							}
+							else return TBA;
+						}
+					}
+				}
+			} // END nod_indirect, index j
+		}
+	} // END d_indirect, index i
+	
 	
 	return 0;
 }

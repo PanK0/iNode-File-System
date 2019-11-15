@@ -85,7 +85,7 @@ int main (int argc, char** argv) {
 			// print actual directory location
 			else if (strcmp(cmd1, DIR_SHOW) == 0) {
 				iNodeFS_printHandle(dirhandle);
-				//iNodeFS_printNodeBlocks(dirhandle->infs->disk, dirhandle->dcb);
+				iNodeFS_printNodeBlocks(dirhandle->infs->disk, dirhandle->dcb);
 			}
 						
 			// create a dir
