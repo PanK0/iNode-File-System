@@ -73,6 +73,7 @@ int main (int argc, char** argv) {
 				FILE_SEEK" [n]      : moves the cursor at pos n in the opened file\n"
 				FILE_DANTE"         : writes Divina Commedia into the file\n"
 				FILE_OMERO"         : writes Iliad into the file\n"
+				FILE_LONG" [n]      : writes (Dante + Omero - 4) * n times\n"
 				FILE_CLOSE"        : closes the last opened file\n"
 				
 				);
@@ -84,7 +85,7 @@ int main (int argc, char** argv) {
 			// print actual directory location
 			else if (strcmp(cmd1, DIR_SHOW) == 0) {
 				iNodeFS_printHandle(dirhandle);
-				//iNodeFS_printNodeBlocks(dirhandle, dirhandle->dcb);
+				//iNodeFS_printNodeBlocks(dirhandle->infs->disk, dirhandle->dcb);
 			}
 						
 			// create a dir
@@ -118,21 +119,19 @@ int main (int argc, char** argv) {
 				iNodeFS_readDir(names, dirhandle);
 				iNodeFS_printArray(names, NUM_BLOCKS);
 			}
-
-/*			
+			
 			// delete a dir or a file
 			else if (strcmp(cmd1, DIR_REMOVE) == 0) {
 				ret = iNodeFS_remove(dirhandle, cmd2);
 				if (ret == TBA) printf (RED "'%s' DOES NOT EXIST\n" COLOR_RESET, cmd2);
-			}
-*/			
+			}			
 			
 			// * * * FILES CMDs * * *
 			
 			// print actual file proprieties
 			else if (strcmp(cmd1, FILE_SHOW) == 0) {
 				iNodeFS_printHandle(filehandle);
-				//iNodeFS_printNodeBlocks(dirhandle, filehandle->fcb);
+				//iNodeFS_printNodeBlocks(dirhandle->infs->disk, filehandle->fcb);
 			}
 			
 			// Create a file

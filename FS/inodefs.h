@@ -219,6 +219,9 @@ int iNodeFS_changeDir(DirectoryHandle* d, char* dirname);
 // -1 on error
 int iNodeFS_mkDir(DirectoryHandle* d, char* dirname);
 
+// Prints all blocks in a node
+void iNodeFS_printNodeBlocks(DiskDriver* disk, iNode* node);
+
 // removes the file in the current directory
 // returns -1 on failure 0 on success
 // if a directory, it removes recursively all contained files
