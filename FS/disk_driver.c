@@ -12,8 +12,8 @@ void DiskDriver_init(DiskDriver* disk, const char* filename, int num_blocks) {
 	
 	// Testing if the file exists (0) or not (-1)
 	fok = access(filename, F_OK);
-	if (fok == 0) printf ("FILE ALREADY EXISTS\n");
-	else printf ("FILE DOES NOT EXIST\n");
+	if (fok == 0) printf ("FILE ALREADY EXISTS : RECOVERING INFORMATIONS\n");
+	else printf ("FILE DOES NOT EXIST : NEED TO CREATE A NEW ONE\n");
 	
 	// Getting the file descriptor
 	fd = open(filename, O_CREAT | O_RDWR, 0666);

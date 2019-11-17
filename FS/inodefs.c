@@ -2973,10 +2973,20 @@ int iNodeFS_remove(DirectoryHandle* d, char* filename) {
 					}
 					// if DIR
 					else if (aux_node->fcb.icb.node_type == DIR) {
+						
 						ret = iNodeFS_changeDir(daux, aux_node->fcb.name);
 						if (ret == TBA) return TBA;
-						ret = iNodeFS_remove(daux, aux_node->fcb.name);
-						if (ret == TBA) return TBA;
+						
+						char* names[aux_node->num_entries];
+						for (int i = 0; i < aux_node->num_entries; ++i) {
+							names[i] = (char*) calloc(NAME_SIZE, 0);
+						}
+						iNodeFS_readDir(names, daux);
+						
+						for (int i = 0; i < aux_node->num_entries; ++i) {
+							ret = iNodeFS_remove(daux, names[i]);
+							if (ret == TBA) return TBA;
+						}
 						
 						// Main node
 						for (int i = 0; i < inode_idx_size; ++i) {
@@ -3203,10 +3213,20 @@ int iNodeFS_remove(DirectoryHandle* d, char* filename) {
 					
 					// if DIR
 					else if (aux_node->fcb.icb.node_type == DIR) {
+						
 						ret = iNodeFS_changeDir(daux, aux_node->fcb.name);
 						if (ret == TBA) return TBA;
-						ret = iNodeFS_remove(daux, aux_node->fcb.name);
-						if (ret == TBA) return TBA;
+						
+						char* names[aux_node->num_entries];
+						for (int i = 0; i < aux_node->num_entries; ++i) {
+							names[i] = (char*) calloc(NAME_SIZE, 0);
+						}
+						iNodeFS_readDir(names, daux);
+						
+						for (int i = 0; i < aux_node->num_entries; ++i) {
+							ret = iNodeFS_remove(daux, names[i]);
+							if (ret == TBA) return TBA;
+						}
 						
 						// Main node
 						for (int i = 0; i < inode_idx_size; ++i) {
@@ -3416,8 +3436,17 @@ int iNodeFS_remove(DirectoryHandle* d, char* filename) {
 							else if (aux_node->fcb.icb.node_type == DIR) {
 								ret = iNodeFS_changeDir(daux, aux_node->fcb.name);
 								if (ret == TBA) return TBA;
-								ret = iNodeFS_remove(daux, aux_node->fcb.name);
-								if (ret == TBA) return TBA;
+								
+								char* names[aux_node->num_entries];
+								for (int i = 0; i < aux_node->num_entries; ++i) {
+									names[i] = (char*) calloc(NAME_SIZE, 0);
+								}
+								iNodeFS_readDir(names, daux);
+								
+								for (int i = 0; i < aux_node->num_entries; ++i) {
+									ret = iNodeFS_remove(daux, names[i]);
+									if (ret == TBA) return TBA;
+								}
 								
 								// Main node
 								for (int i = 0; i < inode_idx_size; ++i) {

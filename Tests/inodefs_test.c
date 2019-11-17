@@ -7,7 +7,7 @@ int main (int argc, char** argv) {
 	printf (BOLD_RED "\n* * * * FILE SYSTEM INITIALIZATION * * * *\n"COLOR_RESET);
 	
 	// Init the disk and the file system
-	printf (YELLOW "\n\n**	Initializing Disk and File System - testing SimpleFS_init()\n\n" COLOR_RESET);
+	printf (YELLOW "\n\n**	Initializing Disk and File System - testing iNodeFS_init()\n\n" COLOR_RESET);
 	
 	DiskDriver disk;
 	DiskDriver_init(&disk, "inodefs_test.txt", NUM_BLOCKS);
@@ -19,14 +19,13 @@ int main (int argc, char** argv) {
 	
 	if (dirhandle == NULL) {
 		// Formatting the disk
-		printf (YELLOW "\n\n**	Formatting File System - testing SimpleFS_format()\n\n" COLOR_RESET);
+		printf (YELLOW "\n\n**	Formatting File System - testing iNodeFS_format()\n\n" COLOR_RESET);
 		iNodeFS_format(&fs);
 		dirhandle = iNodeFS_init(&fs, &disk);
 		iNodeFS_print(&fs, dirhandle);
 	}
 	
 	iNodeFS_printHandle((void*)dirhandle);
-
 	
 	// * * * * TESTING BY SHELL * * * *
 	
