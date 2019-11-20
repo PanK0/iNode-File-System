@@ -111,7 +111,7 @@ void AUX_indirect_dir_management (DirectoryHandle* d, int mode) {
 	int snorlax = TBA;
 	iNode_indirect* aux_node = (iNode_indirect*) malloc(sizeof(iNode_indirect));
 	
-	// Case 1 : we're in the main node (type DIR), so f->indirect == NULL;
+	// we're in the main node (type DIR), so f->indirect == NULL;
 	// if there's need to create an indirect node, create it, write it and locate the dirhandle
 	if (d->indirect == NULL) {
 		// There's space in DIR
@@ -121,7 +121,7 @@ void AUX_indirect_dir_management (DirectoryHandle* d, int mode) {
 			
 			int voyager = DiskDriver_getFreeBlock(disk, 0);
 			if (voyager == TBA) {
-				printf ("ERROR DISK FULL - @ AUX_indirect_dir_management()\n");
+				printf ("ERROR DISK FULL @ AUX_indirect_dir_management()\n");
 				return;
 			}
 			
@@ -151,7 +151,7 @@ void AUX_indirect_dir_management (DirectoryHandle* d, int mode) {
 			// Writing on the disk
 			snorlax = DiskDriver_writeBlock(disk, aux_node, aux_node->header.block_in_disk);
 			if (snorlax == TBA) {
-				printf ("ERROR WRITING - @ AUX_indirect_dir_management()\n");
+				printf ("ERROR WRITING @ AUX_indirect_dir_management()\n");
 				
 				// Freeing memory
 				aux_node = NULL;
@@ -164,7 +164,7 @@ void AUX_indirect_dir_management (DirectoryHandle* d, int mode) {
 			d->dcb->fcb.size_in_bytes += BLOCK_SIZE;
 			snorlax = DiskDriver_writeBlock(disk, d->dcb, d->dcb->header.block_in_disk);
 			if (snorlax == TBA) {
-				printf ("ERROR WRITING - @ AUX_indirect_dir_management()\n");
+				printf ("ERROR WRITING @ AUX_indirect_dir_management()\n");
 				
 				// Freeing memory
 				aux_node = NULL;
@@ -185,7 +185,7 @@ void AUX_indirect_dir_management (DirectoryHandle* d, int mode) {
 			// Updating d
 			snorlax = DiskDriver_readBlock(disk, aux_node, d->dcb->single_indirect);
 			if (snorlax == TBA) {
-				printf ("ERROR READING - @ AUX_indirect_dir_management()\n");
+				printf ("ERROR READING @ AUX_indirect_dir_management()\n");
 				
 				// Freeing memory 
 				aux_node = NULL;
@@ -210,7 +210,7 @@ void AUX_indirect_dir_management (DirectoryHandle* d, int mode) {
 					// Updating d
 					snorlax = DiskDriver_readBlock(disk, aux_node, d->dcb->double_indirect);
 					if (snorlax == TBA) {
-						printf ("ERROR READING - @ AUX_indirect_dir_management()\n");
+						printf ("ERROR READING @ AUX_indirect_dir_management()\n");
 						
 						// Freeing memory
 						aux_node = NULL;
@@ -227,7 +227,7 @@ void AUX_indirect_dir_management (DirectoryHandle* d, int mode) {
 					memset(aux_node, 0, BLOCK_SIZE);
 					int voyager = DiskDriver_getFreeBlock(disk, 0);
 					if (voyager == TBA) {
-						printf ("ERROR DISK FULL - @ AUX_indirect_dir_management()\n");
+						printf ("ERROR DISK FULL @ AUX_indirect_dir_management()\n");
 						return;
 					}
 					
@@ -257,7 +257,7 @@ void AUX_indirect_dir_management (DirectoryHandle* d, int mode) {
 					// Writing on the disk
 					snorlax = DiskDriver_writeBlock(disk, aux_node, aux_node->header.block_in_disk);
 					if (snorlax == TBA) {
-						printf ("ERROR WRITING - @ AUX_indirect_dir_management()\n");
+						printf ("ERROR WRITING @ AUX_indirect_dir_management()\n");
 						
 						// Freeing memory
 						aux_node = NULL;
@@ -271,7 +271,7 @@ void AUX_indirect_dir_management (DirectoryHandle* d, int mode) {
 					d->dcb->fcb.size_in_bytes += BLOCK_SIZE;
 					snorlax = DiskDriver_writeBlock(disk, d->dcb, d->dcb->header.block_in_disk);
 					if (snorlax == TBA) {
-						printf ("ERROR WRITING - @ AUX_indirect_dir_management()\n");
+						printf ("ERROR WRITING @ AUX_indirect_dir_management()\n");
 						
 						// Freeing memory
 						aux_node = NULL;
@@ -297,7 +297,7 @@ void AUX_indirect_dir_management (DirectoryHandle* d, int mode) {
 					memset(aux_node, 0, BLOCK_SIZE);
 					int voyager = DiskDriver_getFreeBlock(disk, 0);
 					if (voyager == TBA) {
-						printf ("ERROR DISK FULL - @ AUX_indirect_dir_management()\n");
+						printf ("ERROR DISK FULL @ AUX_indirect_dir_management()\n");
 						return;
 					}
 					
@@ -327,7 +327,7 @@ void AUX_indirect_dir_management (DirectoryHandle* d, int mode) {
 					// Writing on the disk
 					snorlax = DiskDriver_writeBlock(disk, aux_node, aux_node->header.block_in_disk);
 					if (snorlax == TBA) {
-						printf ("ERROR WRITING - @ AUX_indirect_dir_management()\n");
+						printf ("ERROR WRITING @ AUX_indirect_dir_management()\n");
 						
 						// Freeing memory
 						aux_node = NULL;
@@ -339,7 +339,7 @@ void AUX_indirect_dir_management (DirectoryHandle* d, int mode) {
 					d->indirect->file_blocks[d->pos_in_block] = aux_node->header.block_in_disk;
 					snorlax = DiskDriver_writeBlock(disk, d->indirect, d->indirect->header.block_in_disk);
 					if (snorlax == TBA) {
-						printf ("ERROR WRITING - @ AUX_indirect_dir_management()\n");
+						printf ("ERROR WRITING @ AUX_indirect_dir_management()\n");
 						
 						// Freeing memory
 						aux_node = NULL;
@@ -352,7 +352,7 @@ void AUX_indirect_dir_management (DirectoryHandle* d, int mode) {
 					d->dcb->fcb.size_in_bytes += BLOCK_SIZE;
 					snorlax = DiskDriver_writeBlock(disk, d->dcb, d->dcb->header.block_in_disk);
 					if (snorlax == TBA) {
-						printf ("ERROR WRITING - @ AUX_indirect_dir_management()\n");
+						printf ("ERROR WRITING @ AUX_indirect_dir_management()\n");
 						
 						// Freeing memory
 						aux_node = NULL;
@@ -370,7 +370,7 @@ void AUX_indirect_dir_management (DirectoryHandle* d, int mode) {
 				else {
 					snorlax = DiskDriver_readBlock(disk, aux_node, d->indirect->file_blocks[d->pos_in_block]);
 					if (snorlax == TBA) {
-						printf ("ERROR READING - @ AUX_indirect_dir_management()\n");
+						printf ("ERROR READING @ AUX_indirect_dir_management()\n");
 						
 						// Freeing memory
 						aux_node = NULL;
@@ -387,7 +387,7 @@ void AUX_indirect_dir_management (DirectoryHandle* d, int mode) {
 			}
 			// NO MORE SPACE
 			else {
-				printf ("TOO LARGE DIR - @ AUX_indirect_dir_management()\n");
+				printf ("TOO LARGE DIR @ AUX_indirect_dir_management()\n");
 				return;
 			}
 		}
@@ -401,7 +401,7 @@ void AUX_indirect_dir_management (DirectoryHandle* d, int mode) {
 				// Read the parent node.
 				snorlax = DiskDriver_readBlock(disk, aux_node, d->indirect->icb.upper);
 				if (snorlax == TBA) {
-					printf ("ERROR READING - @ AUX_indirect_dir_management()\n");
+					printf ("ERROR READING @ AUX_indirect_dir_management()\n");
 					
 					// Freeing memory)
 					aux_node = NULL;
@@ -413,7 +413,7 @@ void AUX_indirect_dir_management (DirectoryHandle* d, int mode) {
 				if (aux_node->file_blocks[d->indirect->header.block_in_node+1] != TBA) {
 					snorlax = DiskDriver_readBlock(disk, aux_node, aux_node->file_blocks[d->indirect->header.block_in_node+1]);
 					if (snorlax == TBA) {
-					printf ("ERROR READING - @ AUX_indirect_dir_management()\n");
+					printf ("ERROR READING @ AUX_indirect_dir_management()\n");
 					
 					// Freeing memory)
 					aux_node = NULL;
@@ -433,7 +433,7 @@ void AUX_indirect_dir_management (DirectoryHandle* d, int mode) {
 					memset(another_node, 0, BLOCK_SIZE);
 					int voyager = DiskDriver_getFreeBlock(disk, 0);
 					if (voyager == TBA) {
-						printf ("ERROR DISK FULL - @ AUX_indirect_dir_management()\n");
+						printf ("ERROR DISK FULL @ AUX_indirect_dir_management()\n");
 						return;
 					}
 					
@@ -463,7 +463,7 @@ void AUX_indirect_dir_management (DirectoryHandle* d, int mode) {
 					// Writing on the disk
 					snorlax = DiskDriver_writeBlock(disk, another_node, another_node->header.block_in_disk);
 					if (snorlax == TBA) {
-						printf ("ERROR WRITING - @ AUX_indirect_dir_management()\n");
+						printf ("ERROR WRITING @ AUX_indirect_dir_management()\n");
 						
 						// Freeing memory
 						aux_node = NULL;
@@ -477,7 +477,7 @@ void AUX_indirect_dir_management (DirectoryHandle* d, int mode) {
 					aux_node->file_blocks[another_node->header.block_in_node] = another_node->header.block_in_disk;
 					snorlax = DiskDriver_writeBlock(disk, aux_node, aux_node->header.block_in_disk);
 					if (snorlax == TBA) {
-						printf ("ERROR WRITING - @ AUX_indirect_dir_management()\n");
+						printf ("ERROR WRITING @ AUX_indirect_dir_management()\n");
 						
 						// Freeing memory
 						aux_node = NULL;
@@ -492,7 +492,7 @@ void AUX_indirect_dir_management (DirectoryHandle* d, int mode) {
 					d->dcb->fcb.size_in_bytes += BLOCK_SIZE;
 					snorlax = DiskDriver_writeBlock(disk, d->dcb, d->dcb->header.block_in_disk);
 					if (snorlax == TBA) {
-						printf ("ERROR WRITING - @ AUX_indirect_dir_management()\n");
+						printf ("ERROR WRITING @ AUX_indirect_dir_management()\n");
 						
 						// Freeing memory
 						aux_node = NULL;
@@ -522,16 +522,6 @@ void AUX_indirect_dir_management (DirectoryHandle* d, int mode) {
 // creates an empty file in the directory d
 // returns null on error (file existing, no free blocks)
 // an empty file consists only of a iNode block of type FIL
-
-// RESEARCH FOR ALREADY EXISTENT FILE
-// while searching save the first free occurrence in copy of dirhandle
-// 1. search in the node's index list
-// 2. search in single indirect (if exists)
-// 3 search in double indirect (if exists)
-
-// FILE CREATION
-// 1. check the position of the first free occurrence
-// 2. do something
 FileHandle* iNodeFS_createFile(DirectoryHandle* d, const char* filename) {
 	
 	// Preliminary stuffs
@@ -729,7 +719,7 @@ FileHandle* iNodeFS_createFile(DirectoryHandle* d, const char* filename) {
 				}
 				snorlax = DiskDriver_readBlock(disk, upper, upper->header.block_in_disk);
 				if (snorlax == TBA) {			
-					printf ("ERROR READING - @ iNodeFS_mkdir()\n");
+					printf ("ERROR READING @ iNodeFS_mkdir()\n");
 							
 					// Freeing memory
 					aux_node = NULL;
@@ -1150,7 +1140,7 @@ void AUX_indirect_management (FileHandle* f, int mode) {
 			
 			int voyager = DiskDriver_getFreeBlock(disk, 0);
 			if (voyager == TBA) {
-				printf ("ERROR DISK FULL - 1.0 @ AUX_indirect_management()\n");
+				printf ("ERROR DISK FULL @ AUX_indirect_management()\n");
 				return;
 			}
 					
@@ -1178,7 +1168,7 @@ void AUX_indirect_management (FileHandle* f, int mode) {
 			// Writing on the disk
 			snorlax = DiskDriver_writeBlock(disk, aux_node, aux_node->header.block_in_disk);
 			if (snorlax == TBA) {
-				printf ("ERROR WRITING - 1.1 @ AUX_indirect_management()\n");
+				printf ("ERROR WRITING @ AUX_indirect_management()\n");
 						
 				// Freeing memory
 				aux_node = NULL;
@@ -1192,7 +1182,7 @@ void AUX_indirect_management (FileHandle* f, int mode) {
 			f->fcb->fcb.size_in_bytes += BLOCK_SIZE;
 			snorlax = DiskDriver_writeBlock(disk, f->fcb, f->fcb->header.block_in_disk);
 			if (snorlax == TBA) {
-				printf ("ERROR WRITING - 1.2 @ AUX_indirect_management()\n");
+				printf ("ERROR WRITING @ AUX_indirect_management()\n");
 						
 				// Freeing memory
 				aux_node = NULL;
@@ -1212,7 +1202,7 @@ void AUX_indirect_management (FileHandle* f, int mode) {
 			// Updating f
 			snorlax = DiskDriver_readBlock(disk, aux_node, f->fcb->single_indirect);
 			if (snorlax == TBA) {
-				printf ("ERROR READING - 1.3 @ AUX_indirect_management()\n");
+				printf ("ERROR READING @ AUX_indirect_management()\n");
 						
 				// Freeing memory
 				aux_node = NULL;
@@ -1226,23 +1216,6 @@ void AUX_indirect_management (FileHandle* f, int mode) {
 		}
 		
 	}
-		// 1. verify if we are in single indirect or in double indirect
-		// 		if in single indirect, f->indirect->icb.upper == f->fcb->header.block_in_disk
-		//		AND f->indirect->header.block_in_disk == f->fcb->single_indirect
-		// 1.1 if single indirect is full, check for double indirect existance. if exists just update f
-		//		if double indirect does not exists, create it and update f
-		// 2. verify if we are in double indirect
-		//		2 cases possible: 
-		//		2.0.1 We are in the double indirect
-		//				f->indirect->icb.upper == f->fcb->header.block_in_disk
-		//				SO verify if it's full
-		//				verify if there's need to create another NOD
-		//		2.0.2 We are in a double indirect NOD
-		//				f->indirect->icb.upper == f->fcb->double_indirect
-		//				SO verify if it's full
-		//				take this node's file_blocks[f->pos_in_node] and verify if it already exists
-		//				create another if necessary
-		// 2.1 
 	else {
 		// We are in the single indirect
 		if (f->indirect->header.block_in_disk == f->fcb->single_indirect && 
@@ -1255,7 +1228,7 @@ void AUX_indirect_management (FileHandle* f, int mode) {
 					// Updating f
 					snorlax = DiskDriver_readBlock(disk, aux_node, f->fcb->double_indirect);
 					if (snorlax == TBA) {
-						printf ("ERROR READING - 1.4 @ AUX_indirect_management()\n");
+						printf ("ERROR READING @ AUX_indirect_management()\n");
 								
 						// Freeing memory
 						aux_node = NULL;
@@ -1272,7 +1245,7 @@ void AUX_indirect_management (FileHandle* f, int mode) {
 					memset(aux_node, 0, BLOCK_SIZE);
 					int voyager = DiskDriver_getFreeBlock(disk, 0);
 					if (voyager == TBA) {
-						printf ("ERROR DISK FULL - 1.5 @ AUX_indirect_management()\n");
+						printf ("ERROR DISK FULL @ AUX_indirect_management()\n");
 						return;
 					}
 					
@@ -1300,7 +1273,7 @@ void AUX_indirect_management (FileHandle* f, int mode) {
 					// Writing on the disk
 					snorlax = DiskDriver_writeBlock(disk, aux_node, aux_node->header.block_in_disk);
 					if (snorlax == TBA) {
-						printf ("ERROR WRITING - 1.6 @ AUX_indirect_management()\n");
+						printf ("ERROR WRITING @ AUX_indirect_management()\n");
 								
 						// Freeing memory
 						aux_node = NULL;
@@ -1314,7 +1287,7 @@ void AUX_indirect_management (FileHandle* f, int mode) {
 					f->fcb->fcb.size_in_bytes += BLOCK_SIZE;
 					snorlax = DiskDriver_writeBlock(disk, f->fcb, f->fcb->header.block_in_disk);
 					if (snorlax == TBA) {
-						printf ("ERROR WRITING - 1.7 @ AUX_indirect_management()\n");
+						printf ("ERROR WRITING @ AUX_indirect_management()\n");
 								
 						// Freeing memory
 						aux_node = NULL;
@@ -1342,7 +1315,7 @@ void AUX_indirect_management (FileHandle* f, int mode) {
 					memset(aux_node, 0, BLOCK_SIZE);
 					int voyager = DiskDriver_getFreeBlock(disk, 0);
 					if (voyager == TBA) {
-						printf ("ERROR DISK FULL - 1.5 @ AUX_indirect_management()\n");
+						printf ("ERROR DISK FULL @ AUX_indirect_management()\n");
 						return;
 					}
 					
@@ -1370,7 +1343,7 @@ void AUX_indirect_management (FileHandle* f, int mode) {
 					// Writing on the disk
 					snorlax = DiskDriver_writeBlock(disk, aux_node, aux_node->header.block_in_disk);
 					if (snorlax == TBA) {
-						printf ("ERROR WRITING - 1.6 @ AUX_indirect_management()\n");
+						printf ("ERROR WRITING @ AUX_indirect_management()\n");
 								
 						// Freeing memory
 						aux_node = NULL;
@@ -1382,7 +1355,7 @@ void AUX_indirect_management (FileHandle* f, int mode) {
 					f->indirect->file_blocks[f->pos_in_block] = aux_node->header.block_in_disk;
 					snorlax = DiskDriver_writeBlock(disk, f->indirect, f->indirect->header.block_in_disk);
 					if (snorlax == TBA) {
-						printf ("ERROR WRITING - @ AUX_indirect_management()\n");
+						printf ("ERROR WRITING @ AUX_indirect_management()\n");
 						
 						// Freeing memory
 						aux_node = NULL;
@@ -1395,7 +1368,7 @@ void AUX_indirect_management (FileHandle* f, int mode) {
 					f->fcb->fcb.size_in_bytes += BLOCK_SIZE;
 					snorlax = DiskDriver_writeBlock(disk, f->fcb, f->fcb->header.block_in_disk);
 					if (snorlax == TBA) {
-						printf ("ERROR WRITING - 1.7 @ AUX_indirect_management()\n");
+						printf ("ERROR WRITING @ AUX_indirect_management()\n");
 								
 						// Freeing memory
 						aux_node = NULL;
@@ -1413,7 +1386,7 @@ void AUX_indirect_management (FileHandle* f, int mode) {
 				else {
 					snorlax = DiskDriver_readBlock(disk, aux_node, f->indirect->file_blocks[f->pos_in_block]);
 					if (snorlax == TBA) {
-						printf ("ERROR READING - 1.8 @ AUX_indirect_management()\n");
+						printf ("ERROR READING @ AUX_indirect_management()\n");
 								
 						// Freeing memory
 						aux_node = NULL;
@@ -1431,7 +1404,7 @@ void AUX_indirect_management (FileHandle* f, int mode) {
 			}
 			// NO MORE SPACE
 			else {
-				printf ("TOO LARGE FILE - 1.8 @ AUX_indirect_management()\n");
+				printf ("TOO LARGE FILE @ AUX_indirect_management()\n");
 				return;
 			}
 			
@@ -1456,7 +1429,6 @@ void AUX_indirect_management (FileHandle* f, int mode) {
 				// Check if the next NOD exists.
 				// if exists, move
 				if (aux_node->file_blocks[f->indirect->header.block_in_node+1] != TBA) {
-					printf ("AAAAAAAAAAA %d\n", aux_node->file_blocks[f->indirect->header.block_in_node+1]);
 					snorlax = DiskDriver_readBlock(disk, aux_node, aux_node->file_blocks[f->indirect->header.block_in_node+1]);
 					if (snorlax == TBA) {
 						printf ("ERROR READING @ AUX_indirect_management()\n");
@@ -1509,7 +1481,7 @@ void AUX_indirect_management (FileHandle* f, int mode) {
 					// Writing on the disk
 					snorlax = DiskDriver_writeBlock(disk, another_node, another_node->header.block_in_disk);
 					if (snorlax == TBA) {
-						printf ("ERROR WRITING - @ AUX_indirect_dir_management()\n");
+						printf ("ERROR WRITING @ AUX_indirect_dir_management()\n");
 						
 						// Freeing memory
 						aux_node = NULL;
@@ -1523,7 +1495,7 @@ void AUX_indirect_management (FileHandle* f, int mode) {
 					aux_node->file_blocks[another_node->header.block_in_node] = another_node->header.block_in_disk;
 					snorlax = DiskDriver_writeBlock(disk, aux_node, aux_node->header.block_in_disk);
 					if (snorlax == TBA) {
-						printf ("ERROR WRITING - @ AUX_indirect_dir_management()\n");
+						printf ("ERROR WRITING @ AUX_indirect_dir_management()\n");
 						
 						// Freeing memory
 						aux_node = NULL;
@@ -1538,7 +1510,7 @@ void AUX_indirect_management (FileHandle* f, int mode) {
 					f->fcb->fcb.size_in_bytes += BLOCK_SIZE;
 					snorlax = DiskDriver_writeBlock(disk, f->fcb, f->fcb->header.block_in_disk);
 					if (snorlax == TBA) {
-						printf ("ERROR WRITING - @ AUX_indirect_dir_management()\n");
+						printf ("ERROR WRITING @ AUX_indirect_dir_management()\n");
 						
 						// Freeing memory
 						aux_node = NULL;
@@ -1567,14 +1539,6 @@ void AUX_indirect_management (FileHandle* f, int mode) {
 // writes in the file, at current position for size bytes stored in data
 // overwriting and allocating new space if necessary
 // returns the number of bytes written
-// 1. check if we are in the firstfileblock. IF so, then: 
-// 1.2. take the FileBlock in position f->pos_in_node. IF there's nothing, then create it.
-// 1.3. write the things. Change the FileBlock (and create it) when it's necessary
-// 2. if we are in an indirect node (f->indirect != NULL) :
-// 2.1 write in the node until it's full
-// 2.2 go back to upper level (stored in icb.upper)
-// 2.3 if we are in an indirect node means that we are in the double indirect: create another NOD and continue to work
-// 2.4 if we are in the parent node (icb.upper == TBA) then create a double indirect
 int iNodeFS_write(FileHandle* f, void* data, int size) {
 	
 	// Preliminary stuffs
@@ -1598,7 +1562,7 @@ int iNodeFS_write(FileHandle* f, void* data, int size) {
 			if (faux->fcb->file_blocks[faux->pos_in_node] != TBA) {
 				snorlax = DiskDriver_readBlock(disk, aux_fb, faux->fcb->file_blocks[faux->pos_in_node]);
 				if (snorlax == TBA) {
-					printf ("ERROR READING - 1.1 @ iNodeFS_write()\n");
+					printf ("ERROR READING @ iNodeFS_write()\n");
 					
 					// Freeing memory
 					aux_fb = NULL;
@@ -1623,7 +1587,7 @@ int iNodeFS_write(FileHandle* f, void* data, int size) {
 					// write
 					snorlax = DiskDriver_writeBlock(disk, aux_fb, aux_fb->header.block_in_disk);
 					if (snorlax == TBA) {
-						printf ("ERROR WRITING - 1.1.2 @ iNodeFS_write()\n");
+						printf ("ERROR WRITING @ iNodeFS_write()\n");
 						
 						// Freeing memory
 						aux_fb = NULL;
@@ -1640,7 +1604,7 @@ int iNodeFS_write(FileHandle* f, void* data, int size) {
 				else {
 					snorlax = DiskDriver_writeBlock(disk, aux_fb, aux_fb->header.block_in_disk);
 					if (snorlax == TBA) {
-					printf ("ERROR WRITING - 1.2 @ iNodeFS_write()\n");
+					printf ("ERROR WRITING @ iNodeFS_write()\n");
 					
 					// Freeing memory
 					aux_fb = NULL;
@@ -1663,7 +1627,7 @@ int iNodeFS_write(FileHandle* f, void* data, int size) {
 				memset(aux_fb, 0, BLOCK_SIZE);
 				voyager = DiskDriver_getFreeBlock(disk, 0);
 				if (voyager == TBA) {
-					printf ("ERROR DISK FULL - 1.2.1 @ iNodeFS_write()\n");
+					printf ("ERROR DISK FULL @ iNodeFS_write()\n");
 					return TBA;
 				}
 				
@@ -1683,7 +1647,7 @@ int iNodeFS_write(FileHandle* f, void* data, int size) {
 				// Writing on disk
 				snorlax = DiskDriver_writeBlock(disk, aux_fb, aux_fb->header.block_in_disk);
 				if (snorlax == TBA) {
-					printf ("ERROR WRITING - 1.3 @ iNodeFS_write()\n");
+					printf ("ERROR WRITING @ iNodeFS_write()\n");
 					
 					// Freeing memory
 					aux_fb = NULL;
@@ -1700,7 +1664,7 @@ int iNodeFS_write(FileHandle* f, void* data, int size) {
 				faux->fcb->fcb.size_in_bytes += BLOCK_SIZE;
 				snorlax = DiskDriver_writeBlock(disk, faux->fcb, faux->fcb->header.block_in_disk);
 				if (snorlax == TBA) {
-					printf ("ERROR WRITING - 1.4 @ iNodeFS_write()\n");
+					printf ("ERROR WRITING @ iNodeFS_write()\n");
 					
 					// Freeing memory
 					aux_fb = NULL;
@@ -1722,7 +1686,7 @@ int iNodeFS_write(FileHandle* f, void* data, int size) {
 			if (faux->indirect->file_blocks[faux->pos_in_node] != TBA) {
 				snorlax = DiskDriver_readBlock(disk, aux_fb, faux->indirect->file_blocks[faux->pos_in_node]);
 				if (snorlax == TBA) {
-					printf ("ERROR READING - 1.5 @ iNodeFS_write()\n");
+					printf ("ERROR READING @ iNodeFS_write()\n");
 					
 					// Freeing memory
 					aux_fb = NULL;
@@ -1742,7 +1706,7 @@ int iNodeFS_write(FileHandle* f, void* data, int size) {
 					// write
 					snorlax = DiskDriver_writeBlock(disk, aux_fb, aux_fb->header.block_in_disk);
 					if (snorlax == TBA) {
-					printf ("ERROR WRITING - 1.1.2 @ iNodeFS_write()\n");
+					printf ("ERROR WRITING @ iNodeFS_write()\n");
 					
 					// Freeing memory
 					aux_fb = NULL;
@@ -1757,7 +1721,7 @@ int iNodeFS_write(FileHandle* f, void* data, int size) {
 				else {
 					snorlax = DiskDriver_writeBlock(disk, aux_fb, aux_fb->header.block_in_disk);
 					if (snorlax == TBA) {
-					printf ("ERROR WRITING - 1.6 @ iNodeFS_write()\n");
+					printf ("ERROR WRITING @ iNodeFS_write()\n");
 					
 					// Freeing memory
 					aux_fb = NULL;
@@ -1778,7 +1742,7 @@ int iNodeFS_write(FileHandle* f, void* data, int size) {
 				memset(aux_fb, 0, BLOCK_SIZE);
 				voyager = DiskDriver_getFreeBlock(disk, 0);
 				if (voyager == TBA) {
-					printf ("ERROR DISK FULL - 1.7 @ iNodeFS_write()\n");
+					printf ("ERROR DISK FULL @ iNodeFS_write()\n");
 					return TBA;
 				}
 				
@@ -1798,7 +1762,7 @@ int iNodeFS_write(FileHandle* f, void* data, int size) {
 				// Writing on disk
 				snorlax = DiskDriver_writeBlock(disk, aux_fb, aux_fb->header.block_in_disk);
 				if (snorlax == TBA) {
-					printf ("ERROR WRITING - 1.8 @ iNodeFS_write()\n");
+					printf ("ERROR WRITING @ iNodeFS_write()\n");
 					
 					// Freeing memory
 					aux_fb = NULL;
@@ -1817,7 +1781,7 @@ int iNodeFS_write(FileHandle* f, void* data, int size) {
 				// fcb
 				snorlax = DiskDriver_writeBlock(disk, faux->fcb, faux->fcb->header.block_in_disk);
 				if (snorlax == TBA) {
-					printf ("ERROR WRITING - 1.9 @ iNodeFS_write()\n");
+					printf ("ERROR WRITING @ iNodeFS_write()\n");
 					
 					// Freeing memory
 					aux_fb = NULL;
@@ -1830,7 +1794,7 @@ int iNodeFS_write(FileHandle* f, void* data, int size) {
 				// indirect
 				snorlax = DiskDriver_writeBlock(disk, faux->indirect, faux->indirect->header.block_in_disk);
 				if (snorlax == TBA) {
-					printf ("ERROR WRITING - 1.10 @ iNodeFS_write()\n");
+					printf ("ERROR WRITING @ iNodeFS_write()\n");
 					
 					// Freeing memory
 					aux_fb = NULL;
@@ -1933,7 +1897,7 @@ int iNodeFS_write(FileHandle* f, void* data, int size) {
 				// Writing on disk
 				snorlax = DiskDriver_writeBlock(disk, aux_fb, aux_fb->header.block_in_disk);
 				if (snorlax == TBA) {
-					printf ("ERROR WRITING - 1.8 @ iNodeFS_write()\n");
+					printf ("ERROR WRITING @ iNodeFS_write()\n");
 					
 					// Freeing memory
 					aux_fb = NULL;
@@ -1952,7 +1916,7 @@ int iNodeFS_write(FileHandle* f, void* data, int size) {
 				// fcb
 				snorlax = DiskDriver_writeBlock(disk, faux->fcb, faux->fcb->header.block_in_disk);
 				if (snorlax == TBA) {
-					printf ("ERROR WRITING - 1.9 @ iNodeFS_write()\n");
+					printf ("ERROR WRITING @ iNodeFS_write()\n");
 					
 					// Freeing memory
 					aux_fb = NULL;
@@ -1965,7 +1929,7 @@ int iNodeFS_write(FileHandle* f, void* data, int size) {
 				// indirect
 				snorlax = DiskDriver_writeBlock(disk, faux->indirect, faux->indirect->header.block_in_disk);
 				if (snorlax == TBA) {
-					printf ("ERROR WRITING - 1.10 @ iNodeFS_write()\n");
+					printf ("ERROR WRITING @ iNodeFS_write()\n");
 					
 					// Freeing memory
 					aux_fb = NULL;
@@ -1982,7 +1946,7 @@ int iNodeFS_write(FileHandle* f, void* data, int size) {
 	faux->fcb->num_entries += written_data;
 	snorlax = DiskDriver_writeBlock(disk, faux->fcb, faux->fcb->header.block_in_disk);
 	if (snorlax == TBA) {
-		printf ("ERROR WRITING - 1.10 @ iNodeFS_write()\n");
+		printf ("ERROR WRITING @ iNodeFS_write()\n");
 		
 		// Freeing memory
 		aux_fb = NULL;
@@ -2031,7 +1995,7 @@ int iNodeFS_read(FileHandle* f, void* data, int size) {
 			if (faux->fcb->file_blocks[faux->pos_in_node] != TBA) {
 				snorlax = DiskDriver_readBlock(disk, aux_fb, faux->fcb->file_blocks[faux->pos_in_node]);
 				if (snorlax == TBA) {
-					printf ("ERROR READING - 2.1 @ iNodeFS_read()\n");
+					printf ("ERROR READING @ iNodeFS_read()\n");
 					
 					// Freeing memory
 					aux_fb = NULL;
@@ -2064,7 +2028,7 @@ int iNodeFS_read(FileHandle* f, void* data, int size) {
 		else if (faux->indirect != NULL && faux->indirect->icb.upper == faux->fcb->header.block_in_disk){
 			snorlax = DiskDriver_readBlock(disk, aux_fb, faux->indirect->file_blocks[faux->pos_in_node]);
 			if (snorlax == TBA) {
-				printf ("ERROR READING - 2.2 @ iNodeFS_read()\n");
+				printf ("ERROR READING @ iNodeFS_read()\n");
 				
 				// Freeing memory
 				aux_fb = NULL;
@@ -2105,7 +2069,7 @@ int iNodeFS_read(FileHandle* f, void* data, int size) {
 			if (faux->indirect->file_blocks[faux->pos_in_node] != TBA) {
 				snorlax = DiskDriver_readBlock(disk, aux_fb, faux->indirect->file_blocks[faux->pos_in_node]);
 				if (snorlax == TBA) {
-					printf ("ERROR READING - 2.1 @ iNodeFS_read()\n");
+					printf ("ERROR READING @ iNodeFS_read()\n");
 					
 					// Freeing memory
 					aux_fb = NULL;
@@ -2113,10 +2077,7 @@ int iNodeFS_read(FileHandle* f, void* data, int size) {
 					faux = NULL;
 					free (faux);
 					return TBA;
-				}
-				
-	//			printf ("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA read data : %d, size: %d, fbsize: %d\n", read_data, size, FB_text_size);
-				
+				}				
 				
 				// Check if the block is full : if not, read, else move f->pos_in_node.
 				if (faux->pos_in_block < FB_text_size) {
@@ -2168,7 +2129,7 @@ int iNodeFS_seek(FileHandle* f, int pos) {
 	DiskDriver* disk = f->infs->disk;
 	if (disk == NULL) return TBA;
 	if (pos < 0) {
-		printf ("ERROR NEGATIVE SEEK INPUT - 3.1 @ iNodeFS_seek()\n");
+		printf ("ERROR NEGATIVE SEEK INPUT @ iNodeFS_seek()\n");
 		return TBA;
 	}
 	
@@ -2195,7 +2156,7 @@ int iNodeFS_seek(FileHandle* f, int pos) {
 			FileBlock* aux_fb = (FileBlock*) malloc(sizeof(FileBlock));
 			snorlax = DiskDriver_readBlock(disk, aux_fb, f->fcb->file_blocks[pos_in_node]);
 			if (snorlax == TBA) {
-				printf ("ERROR READING - 3.2 @ iNodeFS_seek()\n");
+				printf ("ERROR READING @ iNodeFS_seek()\n");
 				
 				// Free memory
 				aux_fb = NULL;
@@ -2213,7 +2174,7 @@ int iNodeFS_seek(FileHandle* f, int pos) {
 			return (pos_in_node + pos_in_block);
 		}
 		else {
-			printf ("ERROR BAD SEEK INPUT - 3.3 @ iNodeFS_seek()\n");
+			printf ("ERROR BAD SEEK INPUT @ iNodeFS_seek()\n");
 			return TBA;
 		}
 	}
@@ -2226,7 +2187,7 @@ int iNodeFS_seek(FileHandle* f, int pos) {
 			iNode_indirect* aux_indirect = (iNode_indirect*) malloc(sizeof(iNode_indirect));
 			snorlax = DiskDriver_readBlock(disk, aux_indirect, f->fcb->single_indirect);
 			if (snorlax == TBA) {
-				printf ("ERROR READING - 3.3.2 @ iNodeFS_seek()\n");
+				printf ("ERROR READING @ iNodeFS_seek()\n");
 				
 				// Free memory
 				aux_indirect = NULL;
@@ -2239,7 +2200,7 @@ int iNodeFS_seek(FileHandle* f, int pos) {
 				FileBlock* aux_fb = (FileBlock*) malloc(sizeof(FileBlock));
 				snorlax = DiskDriver_readBlock(disk, aux_fb, f->fcb->file_blocks[pos_in_node]);
 				if (snorlax == TBA) {
-					printf ("ERROR READING - 3.4 @ iNodeFS_seek()\n");
+					printf ("ERROR READING @ iNodeFS_seek()\n");
 					
 					// Free memory
 					aux_indirect = NULL;
@@ -2270,7 +2231,7 @@ int iNodeFS_seek(FileHandle* f, int pos) {
 			iNode_indirect* aux_indirect = (iNode_indirect*) malloc(sizeof(iNode_indirect));
 			snorlax = DiskDriver_readBlock(disk, aux_indirect, f->fcb->single_indirect);
 			if (snorlax == TBA) {
-				printf ("ERROR READING - 3.5 @ iNodeFS_seek()\n");
+				printf ("ERROR READING @ iNodeFS_seek()\n");
 				
 				// Free memory
 				aux_indirect = NULL;
@@ -2282,7 +2243,7 @@ int iNodeFS_seek(FileHandle* f, int pos) {
 			if (aux_indirect->file_blocks[pos_in_indirect] != TBA) {
 				snorlax = DiskDriver_readBlock(disk, aux_indirect, aux_indirect->file_blocks[pos_in_indirect]);
 				if (snorlax == TBA) {
-					printf ("ERROR READING - 3.5 @ iNodeFS_seek()\n");
+					printf ("ERROR READING @ iNodeFS_seek()\n");
 					
 					// Free memory
 					aux_indirect = NULL;
@@ -2295,7 +2256,7 @@ int iNodeFS_seek(FileHandle* f, int pos) {
 					FileBlock* aux_fb = (FileBlock*) malloc(sizeof(FileBlock));
 					snorlax = DiskDriver_readBlock(disk, aux_fb, aux_indirect->file_blocks[pos_in_node]);
 					if (snorlax == TBA) {
-						printf ("ERROR READING - 3.6 @ iNodeFS_seek()\n");
+						printf ("ERROR READING @ iNodeFS_seek()\n");
 						
 						// Free memory
 						aux_indirect = NULL;
@@ -2609,7 +2570,7 @@ int iNodeFS_mkDir(DirectoryHandle* d, char* dirname) {
 		iNode_indirect* upper = (iNode_indirect*) malloc(sizeof(iNode_indirect));
 		snorlax = DiskDriver_readBlock(disk, upper, upper_pos);
 		if (snorlax == TBA) {			
-			printf ("ERROR READING - @ iNodeFS_mkdir()\n");
+			printf ("ERROR READING @ iNodeFS_mkdir()\n");
 					
 			// Freeing memory
 			aux_node = NULL;
@@ -2672,7 +2633,7 @@ int iNodeFS_mkDir(DirectoryHandle* d, char* dirname) {
 				}
 				snorlax = DiskDriver_readBlock(disk, upper, upper->header.block_in_disk);
 				if (snorlax == TBA) {			
-					printf ("ERROR READING - @ iNodeFS_mkdir()\n");
+					printf ("ERROR READING @ iNodeFS_mkdir()\n");
 							
 					// Freeing memory
 					aux_node = NULL;
