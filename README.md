@@ -1,5 +1,7 @@
 # iNode File System
-Simple File System based on iNode structures
+Simple File System based on iNode structures.
+
+This project is similar to the [Simple-File-System](https://github.com/PanK0/Simple-File-System/blob/master/README.md) project built for Operating Systems course at the Bachelor's Degree, but the file system here uses inode structures instead of linked lists.
 
 ## HOW TO RUN
 To run the software is provided a test in */Tests*. Once there, launch the makefile with *make inodefs_test*.
